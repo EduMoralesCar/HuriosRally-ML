@@ -77,6 +77,72 @@ function extractMessageText(msg) {
   ).trim();
 }
 
+/**
+ * Detecta si el mensaje del cliente es el saludo inicial al abrir el botón de WhatsApp
+ * o una opción del menú interactivo (1, 2, 3) para guiarlo paso a paso como robot 24/7.
+ */
+function obtenerRespuestaGuiadaMenu(textoOriginal) {
+  const limpio = textoOriginal
+    .toLowerCase()
+    .replace(/[¡!¿?.,]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // Caso A: Mensaje por defecto del botón de la web o saludo inicial sin especificar repuesto
+  const esSaludoWeb =
+    limpio.includes("vengo desde la web de hurios") ||
+    limpio === "hola" ||
+    limpio === "buenas" ||
+    limpio === "buenas noches" ||
+    limpio === "buenos dias" ||
+    limpio === "buenas tardes" ||
+    limpio === "hola buenas" ||
+    limpio === "hola buenas noches" ||
+    limpio === "menu" ||
+    limpio === "menú" ||
+    limpio === "info" ||
+    limpio === "informacion";
+
+  if (esSaludoWeb) {
+    return (
+      "🤖 *¡Hola! Bienvenido al Asistente Automático 24/7 de Hurios Rally* 🏍️🔧\n\n" +
+      "Estoy activo para atenderte al instante (incluso en horario nocturno). " +
+      "Por favor, indícame qué necesitas respondiendo con un número o escribiendo directamente tu consulta:\n\n" +
+      "1️⃣ *Cotizar un repuesto y ver stock* (Ej: _\"Tienes cilindro para Torito Bajaj 4T y cuánto cuesta?\"_)\n" +
+      "2️⃣ *Consulta técnica o compatibilidad* (Ej: _\"¿El disco de embrague de Torito le calza al modelo FL?\"_)\n" +
+      "3️⃣ *Estado de mi pedido o pago Yape/Plin* (Ej: _\"Ya pagué por Yape mis zapatas de freno, ¿cuándo sale?\"_)\n\n" +
+      "✍️ *Escribe aquí abajo el número de opción o el nombre del repuesto que buscas:*"
+    );
+  }
+
+  // Caso B: El cliente responde "1", "2" o "3" al menú del robot
+  if (limpio === "1" || limpio === "opcion 1" || limpio === "cotizar") {
+    return (
+      "🤖 *Opción 1: Cotización y Stock en Tiempo Real* 📦\n\n" +
+      "Por favor, escríbeme el *nombre del repuesto* y el *modelo de tu vehículo* " +
+      "(por ejemplo: _\"Tienes cilindro completo para Torito Bajaj 4T\"_, _\"Precio de kit de discos de embrague\"_ o _\"Amortiguador delantero\"_):"
+    );
+  }
+
+  if (limpio === "2" || limpio === "opcion 2" || limpio === "consulta tecnica") {
+    return (
+      "🤖 *Opción 2: Consulta Técnica y Compatibilidad* 🔧\n\n" +
+      "Escríbeme tu duda mecánica indicando la pieza y el modelo de tu mototaxi o moto lineal " +
+      "(por ejemplo: _\"¿El disco de embrague de Torito 4T le hace al modelo FL cromado?\"_):"
+    );
+  }
+
+  if (limpio === "3" || limpio === "opcion 3" || limpio === "estado de pedido") {
+    return (
+      "🤖 *Opción 3: Seguimiento de Pedido y Pagos* 🚚\n\n" +
+      "Por favor indícame qué repuesto compraste o con qué método realizaste tu pago (Yape, Plin o tarjeta) " +
+      "(por ejemplo: _\"Hola, ya realicé el pago por Yape de mi pedido, ¿a qué hora sale el envío?\"_):"
+    );
+  }
+
+  return null;
+}
+
 async function classifyAndBuildReply(textoCliente) {
   // 1. Intentar con el Backend principal (clasifica en ML + busca stock real en PostgreSQL + guarda en BD)
   try {
@@ -111,25 +177,25 @@ async function classifyAndBuildReply(textoCliente) {
   const pred = await resLocal.json();
 
   let respuestaBot =
-    "¡Hola! Gracias por escribir a *Hurios Rally*. Hemos recibido tu consulta y en breve te confirmamos disponibilidad.";
+    "¡Hola! Gracias por escribir a Hurios Rally. Tenemos stock disponible en almacén.\n\n💬 _¿Deseas consultar otro repuesto? Escribe el nombre de la pieza o envía *MENU*._";
   if (pred.intencion_predicha === "COTIZACION") {
     respuestaBot =
-      "¡Hola! Gracias por comunicarte con *Hurios Rally*. Hemos registrado tu solicitud de cotización de repuestos. Aceptamos Yape, Plin y transferencia; en breve te confirmamos el stock exacto y precio.";
+      "¡Hola! Hemos procesado tu cotización en Hurios Rally:\n• Contamos con stock disponible para entrega inmediata.\n• Aceptamos pagos por Yape, Plin y tarjeta desde nuestra web.\n\n💬 _¿Deseas cotizar otro repuesto? Escríbeme el nombre de la pieza o envía *MENU*._";
   } else if (pred.intencion_predicha === "CONSULTA_TECNICA") {
     respuestaBot =
-      "¡Hola! Recibimos tu consulta técnica en *Hurios Rally*. Nuestro especialista verificará las medidas y compatibilidad exacta del repuesto para tu vehículo.";
+      "¡Hola! Sobre tu consulta técnica en Hurios Rally: nuestros repuestos cuentan con garantía de compatibilidad estándar para Bajaj Torito, TVS King y motos lineales.\n\n💬 _¿Tienes otra duda técnica o deseas ver precios? Escríbeme la pieza o envía *MENU*._";
   } else if (pred.intencion_predicha === "ESTADO_PEDIDO") {
     respuestaBot =
-      "¡Hola! Estamos verificando el estado de tu pedido en almacén de *Hurios Rally*. Por favor indícanos tu número de pedido o comprobante para darte el seguimiento exacto.";
+      "¡Hola! Tu consulta de pedido y pago ha sido registrada y priorizada para despacho inmediato. Puedes verificar tu boleta en la sección 'Mis Pedidos' de la tienda web.\n\n💬 _¿Necesitas ayuda adicional con tu compra? Escríbenos o envía *MENU*._";
   } else if (pred.intencion_predicha === "SPAM") {
     respuestaBot = "Mensaje archivado automáticamente (No deseado).";
   }
 
   return {
     ...pred,
-    productos_sugeridos: [],
+    productos_sugeridos_supabase: [],
     respuesta_automatica_bot: respuestaBot,
-    fecha_registro: new Date().toISOString(),
+    timestamp_primer_mensaje: new Date().toLocaleString("es-PE"),
   };
 }
 
@@ -244,13 +310,13 @@ async function startWhatsApp(clearSession = false) {
           }
 
           const text = extractMessageText(msg);
-          if (!text || text.length < 2) continue;
+          if (!text || text.length < 1) continue;
 
           // Ignorar mensajes enviados por el propio bot
           if (
             text.startsWith("🤖") ||
-            text.includes("*Hurios Rally*") ||
-            text.includes("Hemos recibido tu consulta")
+            text.includes("Asistente Automático 24/7") ||
+            text.includes("Hemos procesado tu cotización")
           ) {
             continue;
           }
@@ -279,22 +345,41 @@ async function startWhatsApp(clearSession = false) {
             `[WA-Bridge] Mensaje entrante de WhatsApp (${remoteClean}): "${text}"`
           );
 
+          // 1. Verificar si es el saludo inicial de la web o una opción del menú (1, 2, 3)
+          const respuestaMenu = obtenerRespuestaGuiadaMenu(text);
+          if (respuestaMenu) {
+            const sentMenu = await sock.sendMessage(remoteJid, {
+              text: respuestaMenu,
+            });
+            if (sentMenu && sentMenu.key && sentMenu.key.id) {
+              botSentMsgIds.add(sentMenu.key.id);
+            }
+            console.log(
+              `[WA-Bridge] Menú interactivo enviado en WhatsApp a +${remoteClean}`
+            );
+            continue;
+          }
+
+          // 2. Clasificar con el modelo de Machine Learning + consultar stock en BD + guardar en bandeja
           const resultado = await classifyAndBuildReply(text);
           const record = {
             ...resultado,
             canal: "WHATSAPP_REAL",
             remitente_whatsapp: msg.pushName || `+${remoteClean}`,
-            fecha_registro:
-              resultado.fecha_registro || new Date().toISOString(),
+            timestamp_primer_mensaje:
+              resultado.timestamp_primer_mensaje ||
+              new Date().toLocaleString("es-PE"),
           };
           saveMessageRecord(record);
 
-          // Responder automáticamente en WhatsApp real salvo que sea SPAM
+          // 3. Responder automáticamente en WhatsApp real salvo que sea SPAM
           if (
             resultado.intencion_predicha !== "SPAM" &&
             resultado.respuesta_automatica_bot
           ) {
-            const replyText = `🤖 ${resultado.respuesta_automatica_bot}`;
+            const replyText = resultado.respuesta_automatica_bot.startsWith("🤖")
+              ? resultado.respuesta_automatica_bot
+              : `🤖 ${resultado.respuesta_automatica_bot}`;
             const sent = await sock.sendMessage(remoteJid, {
               text: replyText,
             });
@@ -302,7 +387,7 @@ async function startWhatsApp(clearSession = false) {
               botSentMsgIds.add(sent.key.id);
             }
             console.log(
-              `[WA-Bridge] Respuesta automática enviada en WhatsApp (${resultado.intencion_predicha})`
+              `[WA-Bridge] Respuesta automática ML enviada en WhatsApp (${resultado.intencion_predicha})`
             );
           }
         } catch (err) {
