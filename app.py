@@ -1,12 +1,17 @@
 """
 Microservicio REST de Clasificación de Intenciones con Machine Learning (FastAPI)
++ Puente de Conexión a WhatsApp Real (+51 932 544 926)
 Proyecto: HURIOS RALLY E.I.R.L.
 """
 import json
+import os
+import shutil
+import subprocess
+import urllib.request
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import joblib
 import pandas as pd
@@ -21,12 +26,13 @@ from train_pipeline import (
 )
 
 app = FastAPI(
-    title="Hurios Rally ML - Clasificador de Consultas API",
+    title="Hurios Rally ML - Clasificador de Consultas & Bot WhatsApp",
     description=(
         "Servicio de clasificación automática de mensajes de clientes "
-        "en 4 categorías operativas (COTIZACION, CONSULTA_TECNICA, ESTADO_PEDIDO, SPAM)."
+        "en 4 categorías operativas (COTIZACION, CONSULTA_TECNICA, ESTADO_PEDIDO, SPAM) "
+        "y conexión directa con WhatsApp (+51 932 544 926)."
     ),
-    version="1.0.0",
+    version="1.1.0",
 )
 
 app.add_middleware(
@@ -37,18 +43,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+BASE_DIR = Path(__file__).resolve().parent
 MODEL_PATH = MODELS_DIR / "modelo_intenciones_hurios.joblib"
 METRICS_PATH = MODELS_DIR / "metricas_evaluacion.json"
+BRIDGE_SCRIPT = BASE_DIR / "whatsapp_bridge" / "bridge.js"
+BRIDGE_PORT = int(os.environ.get("WHATSAPP_BRIDGE_PORT", "3001"))
 
 pipeline_ml = None
 metricas_ml = {}
+bridge_process: Optional[subprocess.Popen] = None
 
 
 class ConsultaClienteRequest(BaseModel):
     texto_cliente: str = Field(
         ...,
         min_length=2,
-        description="Mensaje enviado por el cliente vía WhatsApp o chat web",
+        description="Mensaje enviado por el cliente vía WhatsApp",
         examples=["Hola maestro, ¿tienes kit de cilindro para mi bajajita Torito RE 205 y a cuánto sale?"],
     )
     hora_del_dia: Optional[int] = Field(
@@ -57,6 +67,10 @@ class ConsultaClienteRequest(BaseModel):
         le=23,
         description="Hora del mensaje (0-23). Si no se envía, toma la hora actual del servidor.",
     )
+
+
+class PairCodeRequest(BaseModel):
+    phone: str = Field(default="51932544926", description="Número de WhatsApp a vincular")
 
 
 class PrediccionIntencionResponse(BaseModel):
@@ -73,6 +87,45 @@ class PrediccionIntencionResponse(BaseModel):
     modelo_utilizado: str
 
 
+def iniciar_puente_whatsapp():
+    global bridge_process
+    if bridge_process is not None and bridge_process.poll() is None:
+        return
+    node_bin = shutil.which("node")
+    if node_bin and BRIDGE_SCRIPT.exists():
+        try:
+            bridge_process = subprocess.Popen(
+                [node_bin, str(BRIDGE_SCRIPT)],
+                cwd=str(BASE_DIR),
+                env={**os.environ, "WHATSAPP_BRIDGE_PORT": str(BRIDGE_PORT)},
+            )
+        except Exception as e:
+            print(f"[HuriosRally-ML] No se pudo iniciar whatsapp_bridge: {e}")
+
+
+def consultar_bridge(method: str, path: str, payload: Optional[dict] = None) -> Any:
+    iniciar_puente_whatsapp()
+    url = f"http://127.0.0.1:{BRIDGE_PORT}{path}"
+    data = json.dumps(payload).encode("utf-8") if payload is not None else None
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={"Content-Type": "application/json"},
+        method=method,
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        return {
+            "status": "STARTING",
+            "qr_data_url": None,
+            "connected_phone": None,
+            "target_phone": "51932544926",
+            "detail": f"Iniciando conector de WhatsApp... ({e})",
+        }
+
+
 @app.on_event("startup")
 def cargar_modelo():
     global pipeline_ml, metricas_ml
@@ -81,6 +134,7 @@ def cargar_modelo():
     pipeline_ml = joblib.load(MODEL_PATH)
     with open(METRICS_PATH, "r", encoding="utf-8") as f:
         metricas_ml = json.load(f)
+    iniciar_puente_whatsapp()
 
 
 @app.get("/health")
@@ -99,6 +153,32 @@ def obtener_info_modelo():
     if not metricas_ml:
         raise HTTPException(status_code=503, detail="Métricas del modelo no disponibles")
     return metricas_ml
+
+
+@app.get("/whatsapp/status")
+def whatsapp_status():
+    return consultar_bridge("GET", "/status")
+
+
+@app.get("/whatsapp/messages")
+def whatsapp_messages():
+    res = consultar_bridge("GET", "/messages")
+    return res if isinstance(res, list) else []
+
+
+@app.post("/whatsapp/connect")
+def whatsapp_connect():
+    return consultar_bridge("POST", "/connect", {})
+
+
+@app.post("/whatsapp/pair-code")
+def whatsapp_pair_code(req: PairCodeRequest):
+    return consultar_bridge("POST", "/pair-code", {"phone": req.phone})
+
+
+@app.post("/whatsapp/logout")
+def whatsapp_logout():
+    return consultar_bridge("POST", "/logout", {})
 
 
 @app.post("/predict", response_model=PrediccionIntencionResponse)

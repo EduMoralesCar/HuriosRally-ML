@@ -5,3 +5,6 @@ __pycache__/
 .pytest_cache/
 .ipynb_checkpoints/
 .env
+whatsapp_bridge/node_modules/
+whatsapp_bridge/auth_info_baileys/
+whatsapp_bridge/whatsapp_messages.json
