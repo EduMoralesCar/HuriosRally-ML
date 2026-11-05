@@ -1,7 +1,6 @@
 """
 Microservicio REST de Clasificación de Intenciones con Machine Learning (FastAPI)
-Proyecto: HURIOS RALLY E.I.R.L. (RUC 20492248933) - Avance de Proyecto Final 3 (APF3 - Semana 15)
-Se integra mediante HTTP JSON con HuriosRally-backend (Java 17 + Spring Boot) y HuriosRally-Frontend (React).
+Proyecto: HURIOS RALLY E.I.R.L.
 """
 import json
 import uuid
@@ -22,11 +21,10 @@ from train_pipeline import (
 )
 
 app = FastAPI(
-    title="Hurios Rally ML - Clasificador de Intenciones API",
+    title="Hurios Rally ML - Clasificador de Consultas API",
     description=(
-        "Microservicio de Machine Learning (Scikit-Learn + FastAPI) para clasificar mensajes "
-        "de clientes de Hurios Rally E.I.R.L. en 4 intenciones (COTIZACION, CONSULTA_TECNICA, "
-        "ESTADO_PEDIDO, SPAM) cumpliendo la Ley N° 29733."
+        "Servicio de clasificación automática de mensajes de clientes "
+        "en 4 categorías operativas (COTIZACION, CONSULTA_TECNICA, ESTADO_PEDIDO, SPAM)."
     ),
     version="1.0.0",
 )
@@ -135,35 +133,33 @@ def predecir_intencion(req: ConsultaClienteRequest):
     pred_clase = str(pipeline_ml.predict(df_feat)[0])
     probs_raw = pipeline_ml.predict_proba(df_feat)[0]
     clases_modelo = list(pipeline_ml.classes_)
-    prob_dict = { str(c): round(float(p), 4) for c, p in zip(clases_modelo, probs_raw) }
+    prob_dict = {str(c): round(float(p), 4) for c, p in zip(clases_modelo, probs_raw)}
     confianza = round(float(max(probs_raw)), 4)
 
-    # Regla de negocio de Hurios Rally (Paso 4.2 Consigna APF3):
-    # Si la confianza es < 0.70 o si es una consulta técnica de compatibilidad compleja, derivar a asesor técnico
     requiere_humano = (confianza < 0.70) or (pred_clase == "CONSULTA_TECNICA" and confianza < 0.85)
 
     acciones = {
         "COTIZACION": (
-            "Consultar stock y precio en tiempo real en Supabase PostgreSQL y enviar cotización "
-            "automática con enlace de carrito y pago Yape/Plin."
+            "Enviar cotización automática con precio actualizado, stock disponible en almacén "
+            "y opciones de pago (Yape, Plin o tarjeta)."
         ),
         "CONSULTA_TECNICA": (
-            "Verificar ficha técnica de compatibilidad Bajaj/TVS/Lineal y, de requerir validación "
-            "mecánica fina, escalar al especialista de mostrador en Av. 22 de Agosto 1012, Comas."
+            "Brindar ficha de compatibilidad técnica del repuesto y, si requiere validación "
+            "mecánica específica, asignar a un asesor."
         ),
         "ESTADO_PEDIDO": (
-            "Consultar tabla de órdenes por código de pedido/Yape en HuriosRally-backend y notificar "
-            "estado de despacho o disponibilidad de recojo en tienda."
+            "Consultar el estado actual de la compra y notificar al cliente el seguimiento "
+            "de entrega o disponibilidad de recojo."
         ),
         "SPAM": (
-            "Filtrar mensaje automáticamente sin consumir tiempo de los vendedores ni generar "
-            "alerta en la bandeja de atención."
+            "Archivar automáticamente como mensaje publicitario o ajeno al giro del negocio "
+            "sin generar alerta en ventas."
         ),
     }
 
-    accion_final = acciones.get(pred_clase, "Derivar a bandeja de soporte.")
+    accion_final = acciones.get(pred_clase, "Asignar a bandeja de soporte.")
     if requiere_humano and pred_clase != "SPAM":
-        accion_final = f"[ESCALAMIENTO HUMANO PRIORITARIO - Confianza {confianza:.2f}] " + accion_final
+        accion_final = f"Atención asistida recomendada: {accion_final}"
 
     return PrediccionIntencionResponse(
         id_conversacion=str(df_input["id_conversacion"].iloc[0]),
@@ -176,5 +172,5 @@ def predecir_intencion(req: ConsultaClienteRequest):
         es_fuera_horario=es_fuera_horario,
         requiere_derivacion_humana=requiere_humano,
         accion_negocio_sugerida=accion_final,
-        modelo_utilizado=metricas_ml.get("modelo_ganador", "SVC"),
+        modelo_utilizado=metricas_ml.get("modelo_ganador", "SVM Lineal"),
     )
