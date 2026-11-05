@@ -1,5 +1,5 @@
 /**
- * Puente de WhatsApp Real (Multi-Device) para Hurios Rally (+51 932 544 926)
+ * Puente de WhatsApp Real (Multi-Device) para Hurios Rally (+51 937 395 986)
  * Conecta el número real de WhatsApp con el clasificador ML y el inventario en PostgreSQL.
  */
 const http = require("http");
@@ -29,7 +29,7 @@ let connectionState = {
   pairing_code: null,
   connected_phone: null,
   connected_name: null,
-  target_phone: "51932544926",
+  target_phone: "51937395986",
   last_updated: new Date().toISOString(),
   last_error: null,
 };
@@ -190,7 +190,7 @@ async function startWhatsApp(clearSession = false) {
         connectionState.status = "CONNECTED";
         connectionState.qr_data_url = null;
         connectionState.pairing_code = null;
-        connectionState.connected_phone = phoneClean || "51932544926";
+        connectionState.connected_phone = phoneClean || "51937395986";
         connectionState.connected_name =
           sock.user?.name || "Hurios Rally — Atención Automática";
         connectionState.last_updated = new Date().toISOString();
@@ -349,7 +349,7 @@ const server = http.createServer(async (req, res) => {
     req.on("end", async () => {
       try {
         const parsed = body ? JSON.parse(body) : {};
-        const rawPhone = String(parsed.phone || "51932544926").replace(
+        const rawPhone = String(parsed.phone || "51937395986").replace(
           /\D/g,
           ""
         );
@@ -397,7 +397,7 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(BRIDGE_PORT, "127.0.0.1", () => {
   console.log(
-    `[WA-Bridge] Escuchando en http://127.0.0.1:${BRIDGE_PORT} (Target: +51 932 544 926)`
+    `[WA-Bridge] Escuchando en http://127.0.0.1:${BRIDGE_PORT} (Target: +51 937 395 986)`
   );
   startWhatsApp(false);
 });

@@ -1,6 +1,6 @@
 """
 Microservicio REST de Clasificación de Intenciones con Machine Learning (FastAPI)
-+ Puente de Conexión a WhatsApp Real (+51 932 544 926)
++ Puente de Conexión a WhatsApp Real (+51 937 395 986)
 Proyecto: HURIOS RALLY E.I.R.L.
 """
 import json
@@ -30,7 +30,7 @@ app = FastAPI(
     description=(
         "Servicio de clasificación automática de mensajes de clientes "
         "en 4 categorías operativas (COTIZACION, CONSULTA_TECNICA, ESTADO_PEDIDO, SPAM) "
-        "y conexión directa con WhatsApp (+51 932 544 926)."
+        "y conexión directa con WhatsApp (+51 937 395 986)."
     ),
     version="1.1.0",
 )
@@ -70,7 +70,7 @@ class ConsultaClienteRequest(BaseModel):
 
 
 class PairCodeRequest(BaseModel):
-    phone: str = Field(default="51932544926", description="Número de WhatsApp a vincular")
+    phone: str = Field(default="51937395986", description="Número de WhatsApp a vincular")
 
 
 class PrediccionIntencionResponse(BaseModel):
@@ -121,7 +121,7 @@ def consultar_bridge(method: str, path: str, payload: Optional[dict] = None) -> 
             "status": "STARTING",
             "qr_data_url": None,
             "connected_phone": None,
-            "target_phone": "51932544926",
+            "target_phone": "51937395986",
             "detail": f"Iniciando conector de WhatsApp... ({e})",
         }
 
