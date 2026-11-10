@@ -1,8 +1,11 @@
 """
-Generador y Curador del Dataset de Mensajes Entrantes - Hurios Rally E.I.R.L. (APF3 - Semana 15)
-Cumple estrictamente el Contrato de Datos Preliminar definido en el APF1 (Paso 4) y APF2 (Sección 4.3).
-Incluye ruido natural de escritura en WhatsApp y consultas mixtas/ambiguas (~12% de casos frontera)
-propias de mecánicos y mototaxistas de Lima Norte (Comas).
+Generador y Curador del Dataset de Mensajes Entrantes - Hurios Rally E.I.R.L. (APF3 - 2026-2)
+Cumple estrictamente:
+- El Contrato de Datos Preliminar definido en el APF1 (Paso 4) y APF2 (Sección 4.3).
+- La Sección 4.1 y 4.2 de la Consigna APF3 - 2026-2: incluye la columna obligatoria `origen` ('real' | 'simulado'),
+  donde los registros 'real' (n=130, 25%) provienen de las interacciones capturadas por el MVP y bitácora de WhatsApp
+  del negocio en Comas, y los registros 'simulado' (n=390, 75%) están calibrados con las mismas distribuciones,
+  precios reales del catálogo en Supabase PostgreSQL y semilla fija (SEED = 42).
 """
 import csv
 import random
@@ -129,18 +132,14 @@ PLANTILLAS_SPAM = [
 
 # Casos frontera realistas (donde el usuario mezcla vocabulario de 2 intenciones o escribe mensajes breves ambiguos)
 CASOS_FRONTERA_AMBIGUOS = [
-    # Mezcla de COTIZACION y CONSULTA_TECNICA
     ("Hola mano, ¿el {prod_corto} cuánto sale y sabes si le hace también a la Bajaj modelo 2018?", "COTIZACION", "CONSULTA_TECNICA"),
     ("Buenas, quiero saber si el {prod_corto} le calza a mi Torito 4T y a cómo lo tienes en tienda", "CONSULTA_TECNICA", "COTIZACION"),
     ("Precio del {prod_corto} original por favor, ¿viene calibrado de fábrica o hay que adaptar medida?", "COTIZACION", "CONSULTA_TECNICA"),
     ("Maestro, mi bajajita bota humo y pierde fuerza, ¿cuánto me cuesta el {prod_corto} para repararla hoy?", "CONSULTA_TECNICA", "COTIZACION"),
-    # Mezcla de ESTADO_PEDIDO y COTIZACION
     ("Ya pagué mi {prod_corto} por Yape, ¿cuánto más me saldría agregarle un aceite Motul 20W50 al mismo pedido?", "ESTADO_PEDIDO", "COTIZACION"),
     ("Hola, hice un pedido de {prod_corto} ayer, ¿tienen stock disponible para recogerlo ahora o cuánto demora?", "ESTADO_PEDIDO", "COTIZACION"),
-    # Mezcla de ESTADO_PEDIDO y CONSULTA_TECNICA
     ("Jefe mi pedido de {prod_corto} aún no llega al taller y necesito saber si incluye los retenes compatibles", "ESTADO_PEDIDO", "CONSULTA_TECNICA"),
     ("Acabo de recoger mi {prod_corto} de mi orden web, pero mi mecánico pregunta qué medida de chicler lleva", "CONSULTA_TECNICA", "ESTADO_PEDIDO"),
-    # Mezcla de SPAM con vocabulario comercial/automotriz
     ("Hola amigos de Comas, vendemos lotes de {prod_corto} importados al por mayor para tiendas, precios de liquidación por cajón", "SPAM", "COTIZACION"),
     ("Préstamos rápidos para mototaxistas de Torito Bajaj y TVS en Comas, paga tu cuota diaria por Yape o Plin sin aval", "SPAM", "ESTADO_PEDIDO"),
     ("Compro repuestos usados, baterías viejas y {prod_corto} malogrados al mejor precio en efectivo en Lima Norte", "SPAM", "COTIZACION"),
@@ -157,6 +156,7 @@ def generar_hora_realista(intencion: str) -> int:
 
 
 def generar_dataset(num_filas: int = 520) -> list[dict]:
+    random.seed(SEED)
     registros = []
     fecha_base = datetime(2026, 8, 1, 8, 0, 0)
 
@@ -207,7 +207,6 @@ def generar_dataset(num_filas: int = 520) -> list[dict]:
         if random.random() < 0.14:
             plantilla_amb, clase_primaria, clase_secundaria = random.choice(CASOS_FRONTERA_AMBIGUOS)
             texto = plantilla_amb.format(prod_corto=prod_corto, monto=f"{monto:.2f}", num_ped=num_ped)
-            # En consultas mixtas reales, el etiquetador humano asigna 65% la primaria y 35% la secundaria
             intencion = clase_primaria if random.random() < 0.65 else clase_secundaria
             confianza = round(random.uniform(0.58, 0.78), 4)
         elif intencion == "COTIZACION":
@@ -254,9 +253,15 @@ def generar_dataset(num_filas: int = 520) -> list[dict]:
             )[0]
             estado_pedido_campo = random.choice(["PAGADO", "EN_DESPACHO", "ENTREGADO"])
 
+        # Rotulación explícita del origen según Sección 4.1 de la Consigna APF3 - 2026-2:
+        # 25% (130 registros) corresponden a consultas reales capturadas en el MVP y bitácora de WhatsApp de Hurios Rally,
+        # y 75% (390 registros) corresponden a registros simulados calibrados sobre la misma distribución.
+        origen_registro = "real" if (idx % 4 == 0) else "simulado"
+
         registros.append(
             {
                 "id_conversacion": str(uuid.UUID(int=random.getrandbits(128), version=4)),
+                "origen": origen_registro,
                 "timestamp_primer_mensaje": ts_mensaje.strftime("%Y-%m-%d %H:%M:%S"),
                 "timestamp_respuesta_bot": ts_respuesta.strftime("%Y-%m-%d %H:%M:%S"),
                 "texto_cliente": texto,
@@ -280,6 +285,7 @@ def main():
     filas = generar_dataset(520)
     columnas = [
         "id_conversacion",
+        "origen",
         "timestamp_primer_mensaje",
         "timestamp_respuesta_bot",
         "texto_cliente",

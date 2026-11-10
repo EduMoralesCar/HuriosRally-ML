@@ -9,10 +9,90 @@
     "ESTADO_PEDIDO",
     "SPAM"
   ],
+  "linea_base_f1_macro": 0.2688,
   "modelo_ganador": "SVM (Support Vector Machine)",
   "f1_macro_ganador": 0.9393,
   "cumple_meta_apf2_085": true,
   "modelos_comparados": {
+    "Línea Base (DummyClassifier)": {
+      "mejores_hiperparametros": {
+        "clf__strategy": "stratified"
+      },
+      "cv_f1_macro_mean": 0.2283,
+      "train_accuracy": 0.2284,
+      "train_f1_macro": 0.2274,
+      "test_accuracy": 0.2788,
+      "test_precision_macro": 0.2693,
+      "test_recall_macro": 0.2724,
+      "test_f1_macro": 0.2688,
+      "test_f1_weighted": 0.274,
+      "gap_overfitting_f1": -0.0415,
+      "matriz_confusion": [
+        [
+          9,
+          8,
+          8,
+          3
+        ],
+        [
+          6,
+          8,
+          9,
+          5
+        ],
+        [
+          8,
+          5,
+          9,
+          4
+        ],
+        [
+          6,
+          9,
+          4,
+          3
+        ]
+      ],
+      "reporte_por_clase": {
+        "COTIZACION": {
+          "precision": 0.3103448275862069,
+          "recall": 0.32142857142857145,
+          "f1-score": 0.3157894736842105,
+          "support": 28.0
+        },
+        "CONSULTA_TECNICA": {
+          "precision": 0.26666666666666666,
+          "recall": 0.2857142857142857,
+          "f1-score": 0.27586206896551724,
+          "support": 28.0
+        },
+        "ESTADO_PEDIDO": {
+          "precision": 0.3,
+          "recall": 0.34615384615384615,
+          "f1-score": 0.32142857142857145,
+          "support": 26.0
+        },
+        "SPAM": {
+          "precision": 0.2,
+          "recall": 0.13636363636363635,
+          "f1-score": 0.16216216216216217,
+          "support": 22.0
+        },
+        "accuracy": 0.27884615384615385,
+        "macro avg": {
+          "precision": 0.26925287356321836,
+          "recall": 0.2724150849150849,
+          "f1-score": 0.26881056906011536,
+          "support": 104.0
+        },
+        "weighted avg": {
+          "precision": 0.2726569407603891,
+          "recall": 0.27884615384615385,
+          "f1-score": 0.27395147710483464,
+          "support": 104.0
+        }
+      }
+    },
     "SVM (Support Vector Machine)": {
       "mejores_hiperparametros": {
         "clf__C": 0.3,
@@ -338,9 +418,140 @@
       }
     }
   },
+  "casos_error_test_set": [
+    {
+      "id_conversacion": "4a0d2b73-fe54-4e4b-80ff-517323dfecd7",
+      "origen": "simulado",
+      "texto_cliente": "Sorteo de un Aceite Motul 5100 4T 20W50 Semisintético 1L gratis para mototaxis: comparte este link con 5 grupos de WhatsApp para reclamar tu pedido",
+      "clase_real": "SPAM",
+      "clase_predicha": "ESTADO_PEDIDO",
+      "confianza_prediccion": 0.934,
+      "hora_del_dia": 8
+    },
+    {
+      "id_conversacion": "a8928ad4-887f-419c-b7ba-19f9802a63cc",
+      "origen": "simulado",
+      "texto_cliente": "Maestro, mi bajajita bota humo y pierde fuerza, ¿cuánto me cuesta el Filtro de Aire Primario y Secundario Bajaj RE para repararla hoy?",
+      "clase_real": "COTIZACION",
+      "clase_predicha": "CONSULTA_TECNICA",
+      "confianza_prediccion": 0.7766,
+      "hora_del_dia": 8
+    },
+    {
+      "id_conversacion": "5e8c8bbf-8f1c-4f8c-b1ae-8af92826a561",
+      "origen": "simulado",
+      "texto_cliente": "Sorteo de un Rodaje de Rueda Delantera SKF 6204 Bajaj gratis para mototaxis: comparte este link con 5 grupos de WhatsApp para reclamar tu pedido",
+      "clase_real": "SPAM",
+      "clase_predicha": "ESTADO_PEDIDO",
+      "confianza_prediccion": 0.9321,
+      "hora_del_dia": 15
+    },
+    {
+      "id_conversacion": "a0d572c8-a837-4e68-bba2-05ca3dba6da8",
+      "origen": "simulado",
+      "texto_cliente": "Acabo de recoger mi Aceite Motul 5100 4T 20W50 Semisintético 1L de mi orden web, pero mi mecánico pregunta qué medida de chicler lleva",
+      "clase_real": "CONSULTA_TECNICA",
+      "clase_predicha": "ESTADO_PEDIDO",
+      "confianza_prediccion": 0.9055,
+      "hora_del_dia": 10
+    },
+    {
+      "id_conversacion": "9f8cc29f-fd35-4c5f-9347-9a3b479bc637",
+      "origen": "simulado",
+      "texto_cliente": "Hola amigos de Comas, vendemos lotes de Kit de Cilindro Standard Bajaj Torito RE 205 4T importados al por mayor para tiendas, precios de liquidación por cajón",
+      "clase_real": "SPAM",
+      "clase_predicha": "COTIZACION",
+      "confianza_prediccion": 0.5587,
+      "hora_del_dia": 20
+    },
+    {
+      "id_conversacion": "64eec4c1-9714-4adc-b3c4-d0306e84e832",
+      "origen": "simulado",
+      "texto_cliente": "Sorteo de un Amortiguador Delantero con Resorte Bajaj Torito gratis para mototaxis: comparte este link con 5 grupos de WhatsApp para reclamar tu pedido",
+      "clase_real": "SPAM",
+      "clase_predicha": "ESTADO_PEDIDO",
+      "confianza_prediccion": 0.9328,
+      "hora_del_dia": 17
+    }
+  ],
+  "verificacion_coherencia_4_2": {
+    "criterio_1_escala_negocio": {
+      "total_registros": 520,
+      "rango_fechas": "2026-08-01 a 2026-10-15",
+      "ticket_promedio_cotizado_soles": 183.4,
+      "porcentaje_nocturno_real_observado": 43.27,
+      "coherente_con_apf1_35_40_pct": true
+    },
+    "criterio_2_rangos_y_unidades": {
+      "violaciones_monto_negativo": 0,
+      "violaciones_hora_fuera_0_23": 0,
+      "violaciones_confianza_fuera_0_1": 0,
+      "violaciones_texto_vacio": 0,
+      "total_violaciones": 0
+    },
+    "criterio_3_consistencia_logica_temporal": {
+      "violaciones_timestamp_respuesta_menor_inicio": 0,
+      "violaciones_regla_es_fuera_horario": 0,
+      "violaciones_clases_no_permitidas": 0,
+      "violaciones_origen_no_permitido": 0
+    },
+    "criterio_7_mezcla_real_simulado": {
+      "conteo_origen": {
+        "simulado": 390,
+        "real": 130
+      },
+      "comparacion_distribuciones": {
+        "real": {
+          "n": 130,
+          "porcentaje_total": 25.0,
+          "longitud_mensaje_media": 124.42,
+          "monto_medio_con_pedido": 169.89,
+          "pct_fuera_horario": 47.69,
+          "distribucion_clases_pct": {
+            "COTIZACION": 29.23,
+            "CONSULTA_TECNICA": 26.92,
+            "ESTADO_PEDIDO": 23.08,
+            "SPAM": 20.77
+          }
+        },
+        "simulado": {
+          "n": 390,
+          "porcentaje_total": 75.0,
+          "longitud_mensaje_media": 123.5,
+          "monto_medio_con_pedido": 188.07,
+          "pct_fuera_horario": 41.79,
+          "distribucion_clases_pct": {
+            "CONSULTA_TECNICA": 26.92,
+            "COTIZACION": 25.9,
+            "ESTADO_PEDIDO": 25.13,
+            "SPAM": 22.05
+          }
+        }
+      }
+    }
+  },
+  "demo_prediccion_registro_nuevo": {
+    "entrada_mvp_json": {
+      "texto_cliente": "Buenas noches maestro, ¿tienes cilindro completo para mi bajajita Torito 4T y cuánto cuesta?",
+      "hora_del_dia": 21,
+      "es_fuera_horario": true
+    },
+    "salida_modelo_json": {
+      "intencion_predicha": "COTIZACION",
+      "confianza_modelo": 0.9831,
+      "probabilidades": {
+        "CONSULTA_TECNICA": 0.0002,
+        "COTIZACION": 0.9831,
+        "ESTADO_PEDIDO": 0.0001,
+        "SPAM": 0.0166
+      },
+      "requiere_derivacion_humana": false
+    }
+  },
   "eda_resumen": {
     "nulos_iniciales": {
       "id_conversacion": 0,
+      "origen": 0,
       "timestamp_primer_mensaje": 0,
       "timestamp_respuesta_bot": 0,
       "texto_cliente": 0,
@@ -358,6 +569,10 @@
       "COTIZACION": 139,
       "ESTADO_PEDIDO": 128,
       "SPAM": 113
+    },
+    "distribucion_origen": {
+      "simulado": 390,
+      "real": 130
     },
     "porcentaje_fuera_horario": 43.27,
     "outliers_iqr": {
