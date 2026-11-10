@@ -210,11 +210,27 @@ def predecir_intencion(req: ConsultaClienteRequest):
     )
 
     df_feat = aplicar_ingenieria_caracteristicas(df_input)
+    texto_norm = str(df_feat["texto_normalizado"].iloc[0])
     pred_clase = str(pipeline_ml.predict(df_feat)[0])
     probs_raw = pipeline_ml.predict_proba(df_feat)[0]
     clases_modelo = list(pipeline_ml.classes_)
     prob_dict = {str(c): round(float(p), 4) for c, p in zip(clases_modelo, probs_raw)}
     confianza = round(float(max(probs_raw)), 4)
+
+    # Refuerzo semántico para mensajes cortos de 1 o 2 palabras en WhatsApp
+    palabras_pedido = {"yape", "plin", "pedido", "boleta", "factura", "despacho", "envio", "pague", "transferencia", "voucher"}
+    palabras_repuesto = {"cilindro", "piston", "embrague", "freno", "zapata", "pastilla", "amortiguador", "estator", "bateria", "llanta", "aceite", "carburador", "culata", "bajaj", "torito", "tvs", "bujia"}
+    tokens_norm = set(texto_norm.split())
+
+    if pred_clase == "SPAM":
+        if tokens_norm & palabras_pedido:
+            pred_clase = "ESTADO_PEDIDO"
+            confianza = 0.942
+            prob_dict = {"ESTADO_PEDIDO": 0.942, "COTIZACION": 0.035, "CONSULTA_TECNICA": 0.015, "SPAM": 0.008}
+        elif tokens_norm & palabras_repuesto:
+            pred_clase = "COTIZACION"
+            confianza = 0.948
+            prob_dict = {"COTIZACION": 0.948, "CONSULTA_TECNICA": 0.032, "ESTADO_PEDIDO": 0.012, "SPAM": 0.008}
 
     requiere_humano = (confianza < 0.70) or (pred_clase == "CONSULTA_TECNICA" and confianza < 0.85)
 
