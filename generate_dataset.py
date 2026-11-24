@@ -207,7 +207,18 @@ def generar_dataset(num_filas: int = 520) -> list[dict]:
         if random.random() < 0.14:
             plantilla_amb, clase_primaria, clase_secundaria = random.choice(CASOS_FRONTERA_AMBIGUOS)
             texto = plantilla_amb.format(prod_corto=prod_corto, monto=f"{monto:.2f}", num_ped=num_ped)
-            intencion = clase_primaria if random.random() < 0.65 else clase_secundaria
+            if random.random() < 0.65:
+                intencion = clase_primaria
+            else:
+                intencion = clase_secundaria
+                # En 85% de los casos secundarios el cliente añade una cola léxica que define su prioridad real
+                if random.random() < 0.85:
+                    if intencion == "COTIZACION":
+                        texto += ", confírmame stock inmediato para pagarlo ahorita"
+                    elif intencion == "CONSULTA_TECNICA":
+                        texto += ", necesito verificar el calce técnico y milímetros antes de desarmar"
+                    elif intencion == "ESTADO_PEDIDO":
+                        texto += ", revisa mi comprobante de operación pagado para el despacho"
             confianza = round(random.uniform(0.58, 0.78), 4)
         elif intencion == "COTIZACION":
             plantilla = random.choice(PLANTILLAS_COTIZACION)
