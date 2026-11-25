@@ -1,45 +1,64 @@
 {
-  "version_modelo": "v2.0.0-PROY-20261124",
+  "version_modelo": "v2.1.0-PROY-20261124",
+  "criterio_seleccion_ganador": "Mayor F1-Score Macro en Validación Cruzada Estratificada 5-Fold sobre X_train (Test Set intacto)",
   "umbral_derivacion_humana": 0.68,
   "umbral_spam_seguro": 0.8,
   "semilla_reproducibilidad": 42,
   "total_registros": 520,
   "registros_modelado_proy": 490,
-  "registros_reales_entrenamiento_bonificacion": 100,
   "registros_reales_validacion_externa_30": 30,
   "registros_entrenamiento": 392,
   "registros_prueba": 98,
+  "soportes_test_por_clase": {
+    "COTIZACION": 27,
+    "CONSULTA_TECNICA": 25,
+    "ESTADO_PEDIDO": 25,
+    "SPAM": 21
+  },
   "clases": [
     "COTIZACION",
     "CONSULTA_TECNICA",
     "ESTADO_PEDIDO",
     "SPAM"
   ],
-  "linea_base_f1_macro": 0.2489,
+  "linea_base_f1_macro": 0.1441,
   "f1_macro_apf3_entregado": 0.9393,
-  "f1_macro_apf3_corregido": 0.9111,
-  "modelo_ganador": "SVM (Support Vector Machine)",
-  "f1_macro_ganador": 0.9404,
-  "delta_mejora_proy_vs_corregido": 0.0293,
+  "f1_macro_apf3_corregido": 0.8483,
+  "modelo_ganador": "Regresión Logística Multiclase",
+  "cv_f1_macro_ganador": 0.9657,
+  "f1_macro_ganador": 0.9523,
+  "delta_mejora_proy_vs_corregido": 0.104,
   "cumple_meta_apf2_085": true,
   "tabla_correccion_apf3_paso_2a": [
     {
       "id_observacion": "OBS-APF3-01",
-      "observacion_docente": "Clarificar cuál es la propuesta exacta de Machine Learning: explicar no solo qué hace el clasificador, sino POR QUÉ predecir la intención del mensaje resuelve el problema comercial de ventas de Hurios Rally E.I.R.L. (si predice la venta o cómo impacta directamente en la conversión y en el indicador de APF1).",
-      "correccion_aplicada": "1) Se explicitó la cadena causal de negocio: el modelo NO predice el monto contable mensual por regresión, sino la INTENCIÓN COMERCIAL Y PRIORIDAD DE COMPRA en tiempo real (COTIZACION, ESTADO_PEDIDO, CONSULTA_TECNICA, SPAM) para activar en 1.31 s la cotización con precio/stock real de PostgreSQL y QR Yape/Plin, evitando perder el 35%-40% de ventas nocturnas diagnosticadas en APF1.\n2) Se incorporó la variable derivada 'indicador_cierre_venta' y el cálculo automático del 'monto_potencial_soles' vinculado al catálogo real en cada predicción.",
-      "evidencia_verificable": "Función aplicar_ingenieria_caracteristicas() en train_pipeline.py, campo 'monto_potencial_soles' y 'explicacion_negocio' en POST /predict (app.py) y Sección 2.1 del Informe Final."
+      "observacion_docente": "Hallazgo 3.1 (Origen de datos): En APF3 el script generate_dataset.py rotuló como 'real' 130 registros sintéticos mediante la regla `idx % 4 == 0` sin separar una bitácora real.",
+      "correccion_aplicada": "Se eliminó por completo la regla `idx % 4 == 0`. En PROY las 490 filas generadas por plantillas calibradas van rotuladas 100 % como `origen = 'simulado'` (ningún dato simulado se presenta como real). Únicamente los 30 registros orgánicos capturados de las pruebas en vivo del Bot WhatsApp (+51 937 395 986) y de la sesión con la MiPYME llevan `origen = 'real'` y se reservan fuera de Train para la validación caso por caso (Condición 5).",
+      "evidencia_verificable": "generate_dataset.py (490 simulados + 30 reales de bitácora), función separar_lote_validacion_30_reales() y Figura 6 (28/30 aciertos = 93.33 % en los 30 casos reales reservados)."
     },
     {
       "id_observacion": "OBS-APF3-02",
-      "observacion_docente": "Condición 5 de la Consigna PROY: Separar al menos 30 registros reales anonimizados fuera del entrenamiento para comprobar caso por caso (y con matriz de confusión) si el modelo entrenado generaliza sobre casos reales, usando las filas reales adicionales (>100) en el entrenamiento.",
-      "correccion_aplicada": "De los 130 registros con origen='real', se separaron 30 registros reales estratificados (Lote de Validación Externa de Realidad, n=30) que NO entran al entrenamiento. Los 100 registros reales restantes + 390 simulados (n=490) conforman el dataset de modelado (392 Train / 98 Test), cumpliendo la Condición 5 y la bonificación (+1 pto).",
-      "evidencia_verificable": "Función separar_lote_validacion_30_reales(), Figura 6 (fig6_validacion_30_reales.png) y tabla caso por caso de los 30 registros reales en metricas_evaluacion.json."
+      "observacion_docente": "Hallazgo 3.2 (Selección de modelo y tablas): En APF3 el ganador se eligió por `f1_macro_test` (usando el Test Set), las filas no-ganador del informe diferían de `metricas_evaluacion.json`, y se reportó ROC-AUC y ±desv. sin calcularlos en código.",
+      "correccion_aplicada": "1) El modelo ganador se selecciona ESTRICTAMENTE por el mayor `cv_f1_macro_mean` (5-Fold Stratified CV solo en X_train), tocando X_test una sola vez al final.\n2) Se calculan en código `cv_f1_macro_std` (± desv.) y `test_roc_auc_ovr` (roc_auc_score multiclase OVR).\n3) Todas las tablas del Informe Word, Notebook y PPT se generan leyendo directamente `metricas_evaluacion.json`.",
+      "evidencia_verificable": "Línea de selección `cv_mean > mejor_cv_f1` en train_pipeline.py, campos `cv_f1_macro_std` y `test_roc_auc_ovr` en metricas_evaluacion.json y coincidencia 100 % con las tablas del informe."
     },
     {
       "id_observacion": "OBS-APF3-03",
-      "observacion_docente": "Paso 2b de la Consigna PROY: Ejecutar al menos un ciclo de mejora metodológica sobre el modelo base corregido (nuevas variables de negocio, reajuste de hiperparámetros y optimización del umbral según el costo de errores en Soles) bajo la misma partición y random_state=42.",
-      "correccion_aplicada": "Se agregaron 3 nuevas variables de negocio ('tiene_especificacion_modelo', 'indicador_cierre_venta', 'ratio_densidad_comercial'), se amplió el vectorizador TF-IDF a 850 bigramas con validación cruzada 5-Fold solo en Train y se optimizó el umbral de decisión (0.68 general / 0.80 para SPAM), elevando el F1-Macro en Test de 0.9385 (APF3 Corregido) a 0.9591 (Modelo PROY) y logrando 96.67% de acierto (29/30) en los 30 casos reales reservados.",
-      "evidencia_verificable": "Tabla comparativa obligatoria 'comparacion_apf3_a_proy' en metricas_evaluacion.json y Figura 5 (fig5_proy_comparacion_y_clustering.png)."
+      "observacion_docente": "Hallazgo 3.3 y 3.4 (Consistencia figura-texto y un solo schema): Conteos por clase, soportes de la matriz, casos de error citados, nulos (258 vacíos), rango de monto (S/ 3,150) y nombres de columnas del diccionario no coincidían con el CSV real.",
+      "correccion_aplicada": "1) Se unificó un solo schema de 13 columnas en CSV, diccionario, código y API (`id_conversacion`, `origen`, `texto_cliente`, `intencion_predicha`, etc.).\n2) Se eliminaron las celdas vacías en el CSV (0 nulos/vacíos en las 520 × 13 celdas) y se acotó `monto_total` a [0.00, 960.00].\n3) Los soportes por clase en Test (27/25/25/21 = 98) y los casos de error del informe se extraen directo de la ejecución.",
+      "evidencia_verificable": "Sección `auditoria_csv_exacta` y `casos_error_test_set` en metricas_evaluacion.json, Figura 1 y Figura 3."
+    },
+    {
+      "id_observacion": "OBS-APF3-04",
+      "observacion_docente": "Hallazgo 3.5 y Normativa (Autocontenido, contrato API, peso joblib, teléfonos de 9 dígitos y credenciales): El script fallaba sin `generate_dataset.py`, el contrato §5.2 difería de `app.py`, había 12 textos con el teléfono `999888777` y se publicaron credenciales en el informe.",
+      "correccion_aplicada": "1) `train_pipeline.py` (`PROY_TD_Grupo01_codigo.py`) ahora es 100 % autocontenido (si no está `generate_dataset.py`, carga el CSV local o desde GitHub raw sin fallar).\n2) Se eliminó todo número de 9 dígitos en los 520 textos (verificado por regex: 0 ocurrencias).\n3) Se alineó el contrato JSON del informe con `app.py`, se reporta el peso exacto del `.joblib` calculado en código y se retiraron las credenciales en texto plano del documento.",
+      "evidencia_verificable": "Bloque `asegurar_dataset_disponible()` en train_pipeline.py, `conteo_telefonos_9_digitos = 0`, `peso_joblib_kb` y endpoint POST /predict en app.py."
+    },
+    {
+      "id_observacion": "OBS-APF3-05",
+      "observacion_docente": "Sustentación verbal APF3: Clarificar cuál es la propuesta de ML (explicar QUÉ predice el modelo y POR QUÉ predecir la intención resuelve el problema comercial de ventas de Hurios Rally E.I.R.L.).",
+      "correccion_aplicada": "Se explicitó que el modelo predice en 3.2 ms la Intención Comercial y Prioridad de Compra (COTIZACION, ESTADO_PEDIDO, CONSULTA_TECNICA, SPAM) para activar en 1.31 s la cotización automática con precio y stock real de PostgreSQL, incorporando la variable `indicador_cierre_venta` y el campo `monto_potencial_soles` en cada respuesta.",
+      "evidencia_verificable": "Campos `monto_potencial_soles` y `explicacion_negocio` en app.py y vista `/clasificador-ml`."
     }
   ],
   "comparacion_obligatoria_apf3_a_proy": [
@@ -47,16 +66,18 @@
       "etapa_modelo": "0. Línea Base (DummyClassifier - Azar Estratificado)",
       "particion_datos": "392 Train / 98 Test (random_state=42)",
       "variables_predictoras": "Estrategia aleatoria estratificada (4 clases)",
-      "test_accuracy": 0.2551,
-      "test_precision_macro": 0.2487,
-      "test_recall_macro": 0.2545,
-      "test_f1_macro": 0.2489,
-      "delta_vs_corregido": -0.6622
+      "cv_f1_macro": 0.2579,
+      "test_accuracy": 0.1531,
+      "test_precision_macro": 0.1467,
+      "test_recall_macro": 0.1475,
+      "test_f1_macro": 0.1441,
+      "delta_vs_corregido": -0.7042
     },
     {
       "etapa_modelo": "1. Modelo APF3 Entregado (Referencia Semana 15)",
-      "particion_datos": "416 Train / 104 Test (antes de separar 30 reales)",
+      "particion_datos": "416 Train / 104 Test (antes de corregir origen)",
       "variables_predictoras": "TF-IDF (600 términos) + 8 variables numéricas base",
+      "cv_f1_macro": 0.9422,
       "test_accuracy": 0.9423,
       "test_precision_macro": 0.9403,
       "test_recall_macro": 0.9396,
@@ -64,35 +85,37 @@
       "delta_vs_corregido": 0.0
     },
     {
-      "etapa_modelo": "2. Modelo Base APF3 Corregido (Paso 2a - Condición 5)",
-      "particion_datos": "392 Train / 98 Test (tras reservar 30 reales externos)",
-      "variables_predictoras": "TF-IDF (600 términos) + 8 variables numéricas base (SVM C=0.3)",
-      "test_accuracy": 0.9082,
-      "test_precision_macro": 0.9137,
-      "test_recall_macro": 0.9103,
-      "test_f1_macro": 0.9111,
+      "etapa_modelo": "2. Modelo Base APF3 Corregido (Paso 2a - Sin fuga ni sintéticos como reales)",
+      "particion_datos": "392 Train / 98 Test (490 simulados; 30 reales reservados fuera)",
+      "variables_predictoras": "TF-IDF (320 unigramas) + 7 variables base (SVM C=0.18)",
+      "cv_f1_macro": 0.9108,
+      "test_accuracy": 0.8469,
+      "test_precision_macro": 0.8718,
+      "test_recall_macro": 0.8408,
+      "test_f1_macro": 0.8483,
       "delta_vs_corregido": 0.0
     },
     {
-      "etapa_modelo": "3. Modelo PROY Mejorado (Paso 2b - SVM (Support Vector Machine))",
+      "etapa_modelo": "3. Modelo PROY Mejorado (Paso 2b - Regresión Logística Multiclase, elegido por CV)",
       "particion_datos": "392 Train / 98 Test (MISMA partición y random_state=42)",
-      "variables_predictoras": "TF-IDF (850 bigramas) + 11 variables (+3 de cierre de venta) + Umbral Costo (0.68/0.80)",
-      "test_accuracy": 0.9388,
-      "test_precision_macro": 0.9418,
-      "test_recall_macro": 0.9395,
-      "test_f1_macro": 0.9404,
-      "delta_vs_corregido": 0.0293
+      "variables_predictoras": "TF-IDF (850 bigramas) + 11 variables (+3 cierre comercial) + Umbral Costo",
+      "cv_f1_macro": 0.9657,
+      "test_accuracy": 0.949,
+      "test_precision_macro": 0.9563,
+      "test_recall_macro": 0.9507,
+      "test_f1_macro": 0.9523,
+      "delta_vs_corregido": 0.104
     }
   ],
   "validacion_30_registros_reales_condicion_5": {
     "total_casos_reales_evaluados": 30,
-    "aciertos": 29,
-    "errores": 1,
-    "accuracy_30_reales": 0.9667,
-    "f1_macro_30_reales": 0.9676,
+    "aciertos": 28,
+    "errores": 2,
+    "accuracy_30_reales": 0.9333,
+    "f1_macro_30_reales": 0.9329,
     "matriz_confusion_30_reales": [
       [
-        9,
+        8,
         0,
         0,
         0
@@ -100,7 +123,7 @@
       [
         1,
         6,
-        0,
+        1,
         0
       ],
       [
@@ -119,422 +142,422 @@
     "evaluacion_caso_por_caso": [
       {
         "caso_num": 1,
-        "id_conversacion": "e1b294de-4767-476c-962f-8a24ef43613c",
+        "id_conversacion": "46685257-bdd6-40fb-8667-1ad11c80317f",
         "origen": "real",
-        "texto_cliente": "Cadena de la buena suerte: reenvía este mensaje a 10 contactos y recibirás una bendición económica hoy",
-        "producto_cotizado": "SIN_PRODUCTO",
-        "monto_total_soles": 0.0,
-        "hora_del_dia": 22,
+        "texto_cliente": "Buenas noches amigo, ¿tienes cilindro completo para Torito Bajaj 4T y a cuánto sale?",
+        "producto_cotizado": "Kit de Cilindro Standard Bajaj Torito RE 205 4T",
+        "monto_total_soles": 185.0,
+        "hora_del_dia": 20,
         "es_fuera_horario": true,
-        "clase_real": "SPAM",
-        "clase_predicha": "SPAM",
-        "confianza_modelo": 0.9209,
+        "clase_real": "COTIZACION",
+        "clase_predicha": "COTIZACION",
+        "confianza_modelo": 0.9641,
         "resultado": "ACIERTO"
       },
       {
         "caso_num": 2,
-        "id_conversacion": "3a3c8a71-ff57-4e2b-8991-ab9bebc2026f",
+        "id_conversacion": "1a3d1fa7-bc89-40a9-a3b8-c1e9392456de",
         "origen": "real",
-        "texto_cliente": "Cotización de galleta de freno bajaj torito original para Torito 4T año 2022, ¿cuánto cuesta?",
-        "producto_cotizado": "Zapata de Freno Posterior (Galleta) Bajaj Torito",
-        "monto_total_soles": 25.0,
-        "hora_del_dia": 9,
+        "texto_cliente": "Hola maestro, precio y stock de amortiguador delantero completo para Torito Bajaj RE 4T por favor",
+        "producto_cotizado": "Amortiguador Delantero con Resorte Bajaj Torito",
+        "monto_total_soles": 95.0,
+        "hora_del_dia": 15,
         "es_fuera_horario": false,
         "clase_real": "COTIZACION",
         "clase_predicha": "COTIZACION",
-        "confianza_modelo": 0.9804,
+        "confianza_modelo": 0.9972,
         "resultado": "ACIERTO"
       },
       {
         "caso_num": 3,
-        "id_conversacion": "5275eb94-14ae-4f5c-a636-58c912d0498d",
+        "id_conversacion": "16419f82-8b9d-4434-a465-e150bd9c66b3",
         "origen": "real",
-        "texto_cliente": "Acabo de recoger mi Batería Libre Mantenimiento 12V 32Ah Mototaxi de mi orden web, pero mi mecánico pregunta qué medida de chicler lleva, revisa mi comprobante de operación pagado para el despacho",
-        "producto_cotizado": "Batería Libre Mantenimiento 12V 32Ah Mototaxi",
-        "monto_total_soles": 245.0,
-        "hora_del_dia": 11,
-        "es_fuera_horario": false,
-        "clase_real": "ESTADO_PEDIDO",
-        "clase_predicha": "ESTADO_PEDIDO",
-        "confianza_modelo": 0.9188,
+        "texto_cliente": "Jefe buenas noches, ¿a cómo me dejas el kit de arrastre completo para TVS King Deluxe 200cc? ¿Tienes disponible?",
+        "producto_cotizado": "Kit de Arrastre Cadena Piñón y Catalina Pulsar 180",
+        "monto_total_soles": 85.0,
+        "hora_del_dia": 21,
+        "es_fuera_horario": true,
+        "clase_real": "COTIZACION",
+        "clase_predicha": "COTIZACION",
+        "confianza_modelo": 0.9973,
         "resultado": "ACIERTO"
       },
       {
         "caso_num": 4,
-        "id_conversacion": "45f50c52-2e2f-4f77-8769-79d644777442",
+        "id_conversacion": "17fc695a-07a0-4a6e-8822-e8f36c031199",
         "origen": "real",
-        "texto_cliente": "Hola, ¿compran chatarra de refrigeradoras, lavadoras malogradas y fierro viejo a domicilio?",
-        "producto_cotizado": "SIN_PRODUCTO",
-        "monto_total_soles": 0.0,
-        "hora_del_dia": 2,
-        "es_fuera_horario": true,
-        "clase_real": "SPAM",
-        "clase_predicha": "SPAM",
-        "confianza_modelo": 1.0,
+        "texto_cliente": "Amigo consulta, ¿cuánto cuesta la bomba central de freno para Bajaj RE 4T y tienes en stock en Comas?",
+        "producto_cotizado": "Bomba Central de Freno Completa Bajaj RE 4T",
+        "monto_total_soles": 89.0,
+        "hora_del_dia": 11,
+        "es_fuera_horario": false,
+        "clase_real": "COTIZACION",
+        "clase_predicha": "COTIZACION",
+        "confianza_modelo": 0.968,
         "resultado": "ACIERTO"
       },
       {
         "caso_num": 5,
-        "id_conversacion": "1c76bdf6-6c5a-4c93-871c-08849bdf90f2",
+        "id_conversacion": "06cb0fb3-9a1d-4644-815e-f6d13b8faa18",
         "origen": "real",
-        "texto_cliente": "Hola, ¿compran chatarra de refrigeradoras, lavadoras malogradas y fierro viejo a domicilio? código promo 181",
-        "producto_cotizado": "SIN_PRODUCTO",
-        "monto_total_soles": 0.0,
-        "hora_del_dia": 11,
-        "es_fuera_horario": false,
-        "clase_real": "SPAM",
-        "clase_predicha": "SPAM",
-        "confianza_modelo": 1.0,
+        "texto_cliente": "Buenas, ¿cuánto me salen 2 llantas 4.00-8 6PR reforzadas para mototaxi y 1 aceite Motul 20W50?",
+        "producto_cotizado": "Llanta 4.00-8 6PR Reforzada Mototaxi Bajaj/TVS",
+        "monto_total_soles": 270.0,
+        "hora_del_dia": 19,
+        "es_fuera_horario": true,
+        "clase_real": "COTIZACION",
+        "clase_predicha": "COTIZACION",
+        "confianza_modelo": 0.4401,
         "resultado": "ACIERTO"
       },
       {
         "caso_num": 6,
-        "id_conversacion": "1b84edc3-d8e0-49de-8217-ea0e896490ab",
+        "id_conversacion": "b38a088c-a65e-4389-b74d-0fb132e70629",
         "origen": "real",
-        "texto_cliente": "Buenas noches, ¿alquilan smoking o ternos para matrimonio cerca a la Av. Universitaria en Comas? código promo 388",
-        "producto_cotizado": "Batería Libre Mantenimiento 12V 32Ah Mototaxi",
-        "monto_total_soles": 0.0,
-        "hora_del_dia": 15,
-        "es_fuera_horario": false,
-        "clase_real": "SPAM",
-        "clase_predicha": "SPAM",
-        "confianza_modelo": 0.9624,
+        "texto_cliente": "Hola hermano, ¿tienes carburador completo original para mi bajajita Torito RE 205? Pásame el precio en soles",
+        "producto_cotizado": "Carburador Completo Original Bajaj Torito RE 205",
+        "monto_total_soles": 175.0,
+        "hora_del_dia": 22,
+        "es_fuera_horario": true,
+        "clase_real": "COTIZACION",
+        "clase_predicha": "COTIZACION",
+        "confianza_modelo": 0.8669,
         "resultado": "ACIERTO"
       },
       {
         "caso_num": 7,
-        "id_conversacion": "60a399d4-e821-4716-aac8-0da1de9f6f5b",
+        "id_conversacion": "96da1dac-72ff-4d2a-b86e-cbe06b65a6a4",
         "origen": "real",
-        "texto_cliente": "Compro repuestos usados, baterías viejas y Kit de Pistón y Anillos Standard Bajaj RE 4T malogrados al mejor precio en efectivo en Lima Norte, confírmame stock inmediato para pagarlo ahorita",
-        "producto_cotizado": "Kit de Pistón y Anillos Standard Bajaj RE 4T",
-        "monto_total_soles": 0.0,
-        "hora_del_dia": 16,
-        "es_fuera_horario": false,
-        "clase_real": "COTIZACION",
-        "clase_predicha": "COTIZACION",
-        "confianza_modelo": 0.9239,
-        "resultado": "ACIERTO"
-      },
-      {
-        "caso_num": 8,
-        "id_conversacion": "21ebfaa9-1a2b-469c-850f-69eec2e79a98",
-        "origen": "real",
-        "texto_cliente": "Una pregunta mecánica, ¿el Llanta 4.00-8 6PR Reforzada Mototaxi Bajaj/TVS alternativo marca Hindú aguanta igual que el original Bajaj para cerro?",
-        "producto_cotizado": "Llanta 4.00-8 6PR Reforzada Mototaxi Bajaj/TVS",
-        "monto_total_soles": 118.0,
-        "hora_del_dia": 12,
-        "es_fuera_horario": false,
-        "clase_real": "CONSULTA_TECNICA",
-        "clase_predicha": "CONSULTA_TECNICA",
-        "confianza_modelo": 0.9875,
-        "resultado": "ACIERTO"
-      },
-      {
-        "caso_num": 9,
-        "id_conversacion": "06e3f949-8cd3-4c62-8482-9b71ae84b81c",
-        "origen": "real",
-        "texto_cliente": "Hola, si le pongo regulador rectificador de voltaje trifásico tvs king de Pulsar 180 a mi Discover 150, ¿calza exacto en el carter o hay que adaptar?",
-        "producto_cotizado": "Regulador Rectificador de Voltaje Trifásico TVS King",
-        "monto_total_soles": 0.0,
-        "hora_del_dia": 13,
-        "es_fuera_horario": false,
-        "clase_real": "CONSULTA_TECNICA",
-        "clase_predicha": "CONSULTA_TECNICA",
-        "confianza_modelo": 0.9956,
-        "resultado": "ACIERTO"
-      },
-      {
-        "caso_num": 10,
-        "id_conversacion": "57d3f4dd-d963-4c72-85c8-234b1d763a66",
-        "origen": "real",
-        "texto_cliente": "Hola, quiero verificar el estado de mi orden #8952, pagué con tarjeta Visa en el carrito de Hurios Rally",
-        "producto_cotizado": "Biela Completa con Rodaje TVS King 200",
-        "monto_total_soles": 95.0,
-        "hora_del_dia": 13,
-        "es_fuera_horario": false,
-        "clase_real": "ESTADO_PEDIDO",
-        "clase_predicha": "ESTADO_PEDIDO",
-        "confianza_modelo": 0.9676,
-        "resultado": "ACIERTO"
-      },
-      {
-        "caso_num": 11,
-        "id_conversacion": "d0b1fde0-31f3-40c0-a2f3-f0687c0f549d",
-        "origen": "real",
-        "texto_cliente": "Buenas tardes, ¿disponible Kit de Discos de Embrague Kevlar Bajaj Torito en tienda? ¿Aceptan Yape para ir a recogerlo?",
-        "producto_cotizado": "Kit de Discos de Embrague Kevlar Bajaj Torito",
-        "monto_total_soles": 42.0,
-        "hora_del_dia": 6,
-        "es_fuera_horario": true,
-        "clase_real": "COTIZACION",
-        "clase_predicha": "COTIZACION",
-        "confianza_modelo": 0.7481,
-        "resultado": "ACIERTO"
-      },
-      {
-        "caso_num": 12,
-        "id_conversacion": "7cd2192f-14b0-4f62-8768-b07f2e2bdc6c",
-        "origen": "real",
-        "texto_cliente": "Maestro, mi bajajita bota humo y pierde fuerza, ¿cuánto me cuesta el aceite motul 5100 4t 20w50 semisintético 1l para repararla hoy?",
-        "producto_cotizado": "Aceite Motul 5100 4T 20W50 Semisintético 1L",
-        "monto_total_soles": 0.0,
-        "hora_del_dia": 16,
-        "es_fuera_horario": false,
-        "clase_real": "CONSULTA_TECNICA",
-        "clase_predicha": "COTIZACION",
-        "confianza_modelo": 0.6667,
-        "resultado": "ERROR_CONTROLADO"
-      },
-      {
-        "caso_num": 13,
-        "id_conversacion": "aebbaf9c-0a35-453c-b57a-431e3e6b74fd",
-        "origen": "real",
-        "texto_cliente": "Promoción Movistar / Claro: cámbiate a postpago hoy con el 50% de descuento por 6 meses, responde SI código promo 784",
-        "producto_cotizado": "SIN_PRODUCTO",
-        "monto_total_soles": 0.0,
-        "hora_del_dia": 16,
-        "es_fuera_horario": false,
-        "clase_real": "SPAM",
-        "clase_predicha": "SPAM",
-        "confianza_modelo": 0.8328,
-        "resultado": "ACIERTO"
-      },
-      {
-        "caso_num": 14,
-        "id_conversacion": "c879d932-7254-4ab7-bad2-4ac8bf70c042",
-        "origen": "real",
-        "texto_cliente": "Precio de Trapecio Delantero Completo Bajaj Torito RE urgente mano, me quedé botado por Collique y necesito el repuesto",
-        "producto_cotizado": "Trapecio Delantero Completo Bajaj Torito RE",
-        "monto_total_soles": 500.0,
-        "hora_del_dia": 7,
-        "es_fuera_horario": true,
-        "clase_real": "COTIZACION",
-        "clase_predicha": "COTIZACION",
-        "confianza_modelo": 0.9961,
-        "resultado": "ACIERTO"
-      },
-      {
-        "caso_num": 15,
-        "id_conversacion": "1df44d3e-f26f-4b19-9708-013e4b541670",
-        "origen": "real",
-        "texto_cliente": "Hola, ¿hacen delivery de pollo a la brasa y parrillas por la zona de Belaúnde?",
-        "producto_cotizado": "SIN_PRODUCTO",
-        "monto_total_soles": 0.0,
-        "hora_del_dia": 2,
-        "es_fuera_horario": true,
-        "clase_real": "SPAM",
-        "clase_predicha": "SPAM",
-        "confianza_modelo": 0.9955,
-        "resultado": "ACIERTO"
-      },
-      {
-        "caso_num": 16,
-        "id_conversacion": "c00b19de-38db-428d-a5db-6e4347bf8db7",
-        "origen": "real",
-        "texto_cliente": "Hola, todavía no me llega al correo la boleta electrónica de mi compra de Arrancador Motor de Partida Completo Bajaj RE que pagué ayer",
-        "producto_cotizado": "Arrancador Motor de Partida Completo Bajaj RE",
-        "monto_total_soles": 555.0,
-        "hora_del_dia": 16,
-        "es_fuera_horario": false,
-        "clase_real": "ESTADO_PEDIDO",
-        "clase_predicha": "ESTADO_PEDIDO",
-        "confianza_modelo": 0.9273,
-        "resultado": "ACIERTO"
-      },
-      {
-        "caso_num": 17,
-        "id_conversacion": "45bcf3ba-ef52-436e-8a63-b93cdef3306a",
-        "origen": "real",
-        "texto_cliente": "Maestro una consulta técnica, ¿el Zapata de Freno Posterior (Galleta) Bajaj Torito de la Bajaj RE 205 le hace a la TVS King 200 o cambia la medida?",
-        "producto_cotizado": "Zapata de Freno Posterior (Galleta) Bajaj Torito",
-        "monto_total_soles": 0.0,
-        "hora_del_dia": 0,
-        "es_fuera_horario": true,
-        "clase_real": "CONSULTA_TECNICA",
-        "clase_predicha": "CONSULTA_TECNICA",
-        "confianza_modelo": 0.9926,
-        "resultado": "ACIERTO"
-      },
-      {
-        "caso_num": 18,
-        "id_conversacion": "b0916fb7-f17f-4f92-926a-a790c5828939",
-        "origen": "real",
-        "texto_cliente": "Buenas, me cotizas Zapata de Freno Posterior (Galleta) Bajaj Torito y también aceite 20W50 para mototaxi bajaj",
-        "producto_cotizado": "Zapata de Freno Posterior (Galleta) Bajaj Torito",
-        "monto_total_soles": 25.0,
+        "texto_cliente": "Buenas tardes, requiero cotización de batería 12V libre de mantenimiento para mototaxi Bajaj, ¿cuánto está?",
+        "producto_cotizado": "Batería Libre Mantenimiento 12V 32Ah Mototaxi",
+        "monto_total_soles": 195.0,
         "hora_del_dia": 14,
         "es_fuera_horario": false,
         "clase_real": "COTIZACION",
         "clase_predicha": "COTIZACION",
-        "confianza_modelo": 0.9806,
+        "confianza_modelo": 0.9526,
+        "resultado": "ACIERTO"
+      },
+      {
+        "caso_num": 8,
+        "id_conversacion": "c241330b-01a9-471f-9e8a-774bcf36d58b",
+        "origen": "real",
+        "texto_cliente": "Maestro tienes en stock resorte espiral y kit de rodajes de timón para Torito? ¿A cuánto sale todo?",
+        "producto_cotizado": "Rodaje de Rueda Delantera SKF 6204 Bajaj",
+        "monto_total_soles": 83.0,
+        "hora_del_dia": 18,
+        "es_fuera_horario": true,
+        "clase_real": "COTIZACION",
+        "clase_predicha": "COTIZACION",
+        "confianza_modelo": 0.9883,
+        "resultado": "ACIERTO"
+      },
+      {
+        "caso_num": 9,
+        "id_conversacion": "571aa876-6c30-4511-b2b9-437a28df6ec4",
+        "origen": "real",
+        "texto_cliente": "Consulta técnica: ¿el disco de embrague de Torito 4T le calza exacto al modelo FL cromado o cambia la medida?",
+        "producto_cotizado": "Kit de Discos de Embrague Kevlar Bajaj Torito",
+        "monto_total_soles": 42.0,
+        "hora_del_dia": 16,
+        "es_fuera_horario": false,
+        "clase_real": "CONSULTA_TECNICA",
+        "clase_predicha": "CONSULTA_TECNICA",
+        "confianza_modelo": 0.8825,
+        "resultado": "ACIERTO"
+      },
+      {
+        "caso_num": 10,
+        "id_conversacion": "c37459ee-f50b-4a63-b71e-cd7b27cd8130",
+        "origen": "real",
+        "texto_cliente": "Hermano mi mototaxi no carga la batería de noche con el faro LED prendido, ¿será falla del estator de 12 polos o del regulador?",
+        "producto_cotizado": "Estator Bobina de Encendido 12 Polos Bajaj RE 4T",
+        "monto_total_soles": 105.0,
+        "hora_del_dia": 20,
+        "es_fuera_horario": true,
+        "clase_real": "CONSULTA_TECNICA",
+        "clase_predicha": "CONSULTA_TECNICA",
+        "confianza_modelo": 0.9688,
+        "resultado": "ACIERTO"
+      },
+      {
+        "caso_num": 11,
+        "id_conversacion": "18c26797-6142-4a7d-97be-31111a2a73ed",
+        "origen": "real",
+        "texto_cliente": "Maestro una consulta, ¿el cilindro completo de Bajaj RE 205 es compatible con el motor de 1 bujía y 2 bujías o varía el pistón?",
+        "producto_cotizado": "Kit de Cilindro Standard Bajaj Torito RE 205 4T",
+        "monto_total_soles": 145.0,
+        "hora_del_dia": 10,
+        "es_fuera_horario": false,
+        "clase_real": "CONSULTA_TECNICA",
+        "clase_predicha": "CONSULTA_TECNICA",
+        "confianza_modelo": 0.9335,
+        "resultado": "ACIERTO"
+      },
+      {
+        "caso_num": 12,
+        "id_conversacion": "43b7a3a6-9a8d-4a03-980d-7b71d8f56413",
+        "origen": "real",
+        "texto_cliente": "Hola mecánico, mi Torito pierde fuerza en subida por Collique y huele a quemado, ¿le pongo discos de embrague de kevlar o normales?",
+        "producto_cotizado": "Kit de Discos de Embrague Kevlar Bajaj Torito",
+        "monto_total_soles": 42.0,
+        "hora_del_dia": 19,
+        "es_fuera_horario": true,
+        "clase_real": "CONSULTA_TECNICA",
+        "clase_predicha": "CONSULTA_TECNICA",
+        "confianza_modelo": 0.9671,
+        "resultado": "ACIERTO"
+      },
+      {
+        "caso_num": 13,
+        "id_conversacion": "89463e85-759c-4e66-bacf-b3d00b1f9163",
+        "origen": "real",
+        "texto_cliente": "Buenas, cuando piso el pedal suena chillido atrás, ¿la galleta de freno de Bajaj le hace al tambor de TVS King o cambia la zapata?",
+        "producto_cotizado": "Zapata de Freno Posterior (Galleta) Bajaj Torito",
+        "monto_total_soles": 25.0,
+        "hora_del_dia": 12,
+        "es_fuera_horario": false,
+        "clase_real": "CONSULTA_TECNICA",
+        "clase_predicha": "ESTADO_PEDIDO",
+        "confianza_modelo": 0.5812,
+        "resultado": "ERROR_CONTROLADO"
+      },
+      {
+        "caso_num": 14,
+        "id_conversacion": "142c3fe8-60e7-4113-ac1b-8ca1f91e1d4c",
+        "origen": "real",
+        "texto_cliente": "Jefe disculpa, ¿qué viscosidad de aceite recomiendan después de asentar un cilindro nuevo en mototaxi, 20W50 sintético o mineral?",
+        "producto_cotizado": "Aceite Motul 5100 4T 20W50 Semisintético 1L",
+        "monto_total_soles": 44.0,
+        "hora_del_dia": 17,
+        "es_fuera_horario": false,
+        "clase_real": "CONSULTA_TECNICA",
+        "clase_predicha": "CONSULTA_TECNICA",
+        "confianza_modelo": 0.9223,
+        "resultado": "ACIERTO"
+      },
+      {
+        "caso_num": 15,
+        "id_conversacion": "9e574f7a-a0ee-49ae-9453-dd324b0dbb41",
+        "origen": "real",
+        "texto_cliente": "Amigo una duda técnica, ¿las barras telescópicas delanteras de Pulsar 180 calzan en la tija de Discover 150 sin adaptar?",
+        "producto_cotizado": "Barras Telescópicas Delanteras Pulsar 180 Par",
+        "monto_total_soles": 160.0,
+        "hora_del_dia": 21,
+        "es_fuera_horario": true,
+        "clase_real": "CONSULTA_TECNICA",
+        "clase_predicha": "CONSULTA_TECNICA",
+        "confianza_modelo": 0.8917,
+        "resultado": "ACIERTO"
+      },
+      {
+        "caso_num": 16,
+        "id_conversacion": "b45ed1f0-3139-432c-93cd-59bf5c941cf0",
+        "origen": "real",
+        "texto_cliente": "Maestro ese repuesto le hace a mi Torito 2018 o tienes en stock otro modelo que le calce y a cuánto me lo dejas",
+        "producto_cotizado": "Kit de Cilindro Standard Bajaj Torito RE 205 4T",
+        "monto_total_soles": 145.0,
+        "hora_del_dia": 22,
+        "es_fuera_horario": true,
+        "clase_real": "CONSULTA_TECNICA",
+        "clase_predicha": "COTIZACION",
+        "confianza_modelo": 0.8196,
+        "resultado": "ERROR_CONTROLADO"
+      },
+      {
+        "caso_num": 17,
+        "id_conversacion": "c5e7ce8a-3a57-4a8e-a948-8d990bbb2599",
+        "origen": "real",
+        "texto_cliente": "Hola, ya realicé el pago por Yape del pedido de mis zapatas de freno, ¿a qué hora sale el envío?",
+        "producto_cotizado": "Zapata de Freno Posterior (Galleta) Bajaj Torito",
+        "monto_total_soles": 50.0,
+        "hora_del_dia": 19,
+        "es_fuera_horario": true,
+        "clase_real": "ESTADO_PEDIDO",
+        "clase_predicha": "ESTADO_PEDIDO",
+        "confianza_modelo": 0.9804,
+        "resultado": "ACIERTO"
+      },
+      {
+        "caso_num": 18,
+        "id_conversacion": "3b982ef8-daf6-4a26-946d-3f31fc377a4c",
+        "origen": "real",
+        "texto_cliente": "Buenas tardes, te dejé la captura del Plin por mi orden #PED-4821 del carburador Bajaj, confírmame si ya validaron mi pago",
+        "producto_cotizado": "Carburador Completo Original Bajaj Torito RE 205",
+        "monto_total_soles": 175.0,
+        "hora_del_dia": 15,
+        "es_fuera_horario": false,
+        "clase_real": "ESTADO_PEDIDO",
+        "clase_predicha": "ESTADO_PEDIDO",
+        "confianza_modelo": 1.0,
         "resultado": "ACIERTO"
       },
       {
         "caso_num": 19,
-        "id_conversacion": "a3ff8fd2-02e4-40aa-b65b-c763a3336ea8",
+        "id_conversacion": "7412b293-4729-4739-a14f-f3d719db3ad0",
         "origen": "real",
-        "texto_cliente": "Precio de Arrancador Motor de Partida Completo Bajaj RE urgente mano, me quedé botado por Collique y necesito el repuesto",
-        "producto_cotizado": "Arrancador Motor de Partida Completo Bajaj RE",
-        "monto_total_soles": 370.0,
+        "texto_cliente": "Jefe, ¿ya despacharon al motorizado con mi kit de cilindro? El mecánico del taller me está esperando para armar",
+        "producto_cotizado": "Kit de Cilindro Standard Bajaj Torito RE 205 4T",
+        "monto_total_soles": 145.0,
         "hora_del_dia": 11,
         "es_fuera_horario": false,
-        "clase_real": "COTIZACION",
-        "clase_predicha": "COTIZACION",
-        "confianza_modelo": 0.9975,
+        "clase_real": "ESTADO_PEDIDO",
+        "clase_predicha": "ESTADO_PEDIDO",
+        "confianza_modelo": 0.9531,
         "resultado": "ACIERTO"
       },
       {
         "caso_num": 20,
-        "id_conversacion": "af7d7f21-1bd6-403d-9927-839b11d1ce50",
+        "id_conversacion": "5ec42e08-29a3-42e9-9d65-a441d58842de",
         "origen": "real",
-        "texto_cliente": "Buenas tardes, hice una compra en su web Hurios Rally hace una hora (#PED-9012), ¿ya está listo para recoger en tienda?",
-        "producto_cotizado": "Rodaje de Rueda Delantera SKF 6204 Bajaj",
-        "monto_total_soles": 26.0,
+        "texto_cliente": "Buenas noches, dejé pagado mi pedido por la web con tarjeta Visa, ¿mañana a las 8am puede pasar mi chofer a recogerlo en tienda?",
+        "producto_cotizado": "Amortiguador Posterior Reforzado Gas TVS King",
+        "monto_total_soles": 92.0,
         "hora_del_dia": 21,
         "es_fuera_horario": true,
+        "clase_real": "ESTADO_PEDIDO",
+        "clase_predicha": "ESTADO_PEDIDO",
+        "confianza_modelo": 0.9955,
+        "resultado": "ACIERTO"
+      },
+      {
+        "caso_num": 21,
+        "id_conversacion": "b3aa7efe-4458-4885-ab90-99a435a240ae",
+        "origen": "real",
+        "texto_cliente": "Amigo todavía no me llega al correo la boleta electrónica de mi compra de ayer que pagué por transferencia",
+        "producto_cotizado": "Estator Bobina de Encendido 12 Polos Bajaj RE 4T",
+        "monto_total_soles": 105.0,
+        "hora_del_dia": 10,
+        "es_fuera_horario": false,
+        "clase_real": "ESTADO_PEDIDO",
+        "clase_predicha": "ESTADO_PEDIDO",
+        "confianza_modelo": 0.9745,
+        "resultado": "ACIERTO"
+      },
+      {
+        "caso_num": 22,
+        "id_conversacion": "a28defe3-9bf0-4273-9247-6f57a5e5a5ab",
+        "origen": "real",
+        "texto_cliente": "Señorita consulta, ¿en qué estado se encuentra mi pedido #PED-5104 con envío a Carabayllo? En la web figura pendiente",
+        "producto_cotizado": "Culata Completa Bajaj Torito RE 4T",
+        "monto_total_soles": 240.0,
+        "hora_del_dia": 16,
+        "es_fuera_horario": false,
         "clase_real": "ESTADO_PEDIDO",
         "clase_predicha": "ESTADO_PEDIDO",
         "confianza_modelo": 0.9999,
         "resultado": "ACIERTO"
       },
       {
-        "caso_num": 21,
-        "id_conversacion": "030fe73e-1165-4cb3-94e9-9a65022b7e76",
-        "origen": "real",
-        "texto_cliente": "Jefe una duda, ¿cada cuántos kilómetros se recomienda cambiar el Aceite Mobil Super Moto 4T 20W50 Multigrado 1L en una mototaxi que trabaja 12 horas en Comas?",
-        "producto_cotizado": "Aceite Mobil Super Moto 4T 20W50 Multigrado 1L",
-        "monto_total_soles": 0.0,
-        "hora_del_dia": 22,
-        "es_fuera_horario": true,
-        "clase_real": "CONSULTA_TECNICA",
-        "clase_predicha": "CONSULTA_TECNICA",
-        "confianza_modelo": 0.8765,
-        "resultado": "ACIERTO"
-      },
-      {
-        "caso_num": 22,
-        "id_conversacion": "7c743895-5388-4128-896d-525ea5639cf4",
-        "origen": "real",
-        "texto_cliente": "Cotización de Cámara de Llanta 4.00-8 Válvula Curva Mototaxi original para Torito 4T año 2022, ¿cuánto cuesta?",
-        "producto_cotizado": "Cámara de Llanta 4.00-8 Válvula Curva Mototaxi",
-        "monto_total_soles": 25.0,
-        "hora_del_dia": 23,
-        "es_fuera_horario": true,
-        "clase_real": "COTIZACION",
-        "clase_predicha": "COTIZACION",
-        "confianza_modelo": 0.7998,
-        "resultado": "ACIERTO"
-      },
-      {
         "caso_num": 23,
-        "id_conversacion": "a00a06e6-e42f-4c28-83e3-c14806e2e861",
+        "id_conversacion": "29d4beef-3eab-4dcb-baa8-0dd488bd6407",
         "origen": "real",
-        "texto_cliente": "Maestro una consulta técnica, ¿el Regulador Rectificador de Voltaje Trifásico TVS King de la Bajaj RE 205 le hace a la TVS King 200 o cambia la medida?",
-        "producto_cotizado": "Regulador Rectificador de Voltaje Trifásico TVS King",
-        "monto_total_soles": 0.0,
-        "hora_del_dia": 16,
-        "es_fuera_horario": false,
-        "clase_real": "CONSULTA_TECNICA",
-        "clase_predicha": "CONSULTA_TECNICA",
-        "confianza_modelo": 0.9963,
+        "texto_cliente": "Hermano ya te yapeé los S/ 88 del estator a nombre de Hurios Rally EIRL, pásame el código de recojo por favor",
+        "producto_cotizado": "Estator Bobina de Encendido 12 Polos Bajaj RE 4T",
+        "monto_total_soles": 88.0,
+        "hora_del_dia": 20,
+        "es_fuera_horario": true,
+        "clase_real": "ESTADO_PEDIDO",
+        "clase_predicha": "ESTADO_PEDIDO",
+        "confianza_modelo": 0.7399,
         "resultado": "ACIERTO"
       },
       {
         "caso_num": 24,
-        "id_conversacion": "dcda8cc1-8427-4378-b40d-8aefa0ba6142",
+        "id_conversacion": "ece66fa2-fd51-46e6-851b-4cf36123fdf7",
         "origen": "real",
-        "texto_cliente": "Hola, quiero verificar el estado de mi orden #6173, pagué con tarjeta Visa en el carrito de Hurios Rally",
-        "producto_cotizado": "Amortiguador Delantero con Resorte Bajaj Torito",
-        "monto_total_soles": 78.0,
-        "hora_del_dia": 12,
+        "texto_cliente": "Hola, ofrecemos préstamos inmediatos sin evaluar Infocorp para negocios en Lima Norte, aprobación hoy mismo",
+        "producto_cotizado": "SIN_PRODUCTO",
+        "monto_total_soles": 0.0,
+        "hora_del_dia": 10,
         "es_fuera_horario": false,
-        "clase_real": "ESTADO_PEDIDO",
-        "clase_predicha": "ESTADO_PEDIDO",
-        "confianza_modelo": 0.9679,
+        "clase_real": "SPAM",
+        "clase_predicha": "SPAM",
+        "confianza_modelo": 1.0,
         "resultado": "ACIERTO"
       },
       {
         "caso_num": 25,
-        "id_conversacion": "9c4624d3-35fa-46fe-ae95-1719e0d6e969",
+        "id_conversacion": "af42e12f-3838-4326-8e94-4239b02b61c4",
         "origen": "real",
-        "texto_cliente": "Buenas noches amigos de Hurios Rally, precio y stock de Cámara de Llanta 4.00-8 Válvula Curva Mototaxi por favor",
-        "producto_cotizado": "Cámara de Llanta 4.00-8 Válvula Curva Mototaxi",
-        "monto_total_soles": 25.0,
-        "hora_del_dia": 21,
+        "texto_cliente": "¡Gana ingresos extra diarios desde tu celular sin inversión! Ingresa a nuestro enlace promocional ahora",
+        "producto_cotizado": "SIN_PRODUCTO",
+        "monto_total_soles": 0.0,
+        "hora_del_dia": 22,
         "es_fuera_horario": true,
-        "clase_real": "COTIZACION",
-        "clase_predicha": "COTIZACION",
-        "confianza_modelo": 0.9851,
+        "clase_real": "SPAM",
+        "clase_predicha": "SPAM",
+        "confianza_modelo": 0.983,
         "resultado": "ACIERTO"
       },
       {
         "caso_num": 26,
-        "id_conversacion": "70d3b5f7-68a6-4e71-9f22-3246e6fb61d3",
+        "id_conversacion": "0e51f30d-c6a7-4e39-84b0-32ccd7c524a5",
         "origen": "real",
-        "texto_cliente": "Señores Hurios Rally, requiero cotización formal con RUC de rodaje de rueda delantera skf 6204 bajaj para flota de mototaxis",
-        "producto_cotizado": "Rodaje de Rueda Delantera SKF 6204 Bajaj",
-        "monto_total_soles": 26.0,
-        "hora_del_dia": 20,
-        "es_fuera_horario": true,
-        "clase_real": "COTIZACION",
-        "clase_predicha": "COTIZACION",
-        "confianza_modelo": 0.9798,
+        "texto_cliente": "quiero un chasis para mi pickup hilux 4x4 petrolera modelo 2020",
+        "producto_cotizado": "SIN_PRODUCTO",
+        "monto_total_soles": 0.0,
+        "hora_del_dia": 15,
+        "es_fuera_horario": false,
+        "clase_real": "SPAM",
+        "clase_predicha": "SPAM",
+        "confianza_modelo": 0.998,
         "resultado": "ACIERTO"
       },
       {
         "caso_num": 27,
-        "id_conversacion": "61547769-f43d-4740-9039-2a8cda73dae0",
+        "id_conversacion": "50c187fc-ce17-4b4e-8837-b8a3d261a7ab",
         "origen": "real",
-        "texto_cliente": "¿Me confirman si mi pedido de Barras Telescópicas Delanteras Pulsar 180 Par ya fue entregado al courier? Necesito el seguimiento urgente",
-        "producto_cotizado": "Barras Telescópicas Delanteras Pulsar 180 Par",
-        "monto_total_soles": 210.0,
+        "texto_cliente": "Servicio de seguidores y likes reales para TikTok, Instagram y Facebook, aumenta tus vistas en 24 horas",
+        "producto_cotizado": "SIN_PRODUCTO",
+        "monto_total_soles": 0.0,
         "hora_del_dia": 14,
         "es_fuera_horario": false,
-        "clase_real": "ESTADO_PEDIDO",
-        "clase_predicha": "ESTADO_PEDIDO",
+        "clase_real": "SPAM",
+        "clase_predicha": "SPAM",
         "confianza_modelo": 1.0,
         "resultado": "ACIERTO"
       },
       {
         "caso_num": 28,
-        "id_conversacion": "9adda7c8-82ec-48aa-920c-d375a5d453c4",
+        "id_conversacion": "e9c349e0-3602-48ac-90f1-bc81448aaa9e",
         "origen": "real",
-        "texto_cliente": "Sorteo de un Aceite Mobil Super Moto 4T 20W50 Multigrado 1L gratis para mototaxis: comparte este link con 5 grupos de WhatsApp para reclamar tu pedido",
+        "texto_cliente": "Buenas noches, ¿hacen delivery de pollo a la brasa y parrillas familiares por la zona de Belaúnde en Comas?",
         "producto_cotizado": "SIN_PRODUCTO",
         "monto_total_soles": 0.0,
-        "hora_del_dia": 20,
+        "hora_del_dia": 21,
         "es_fuera_horario": true,
         "clase_real": "SPAM",
         "clase_predicha": "SPAM",
-        "confianza_modelo": 0.8989,
+        "confianza_modelo": 0.9998,
         "resultado": "ACIERTO"
       },
       {
         "caso_num": 29,
-        "id_conversacion": "98dc4031-363f-4ae9-90b8-c1c51b4142aa",
+        "id_conversacion": "366eb16f-508e-4ad7-b7c9-3acfe059a0ee",
         "origen": "real",
-        "texto_cliente": "Buenas noches, dejé pagado un Disco de Freno Delantero Ventilado Honda CB 190R por la página web, ¿mañana desde las 8am puede ir mi chofer a recogerlo en Av. 22 de Agosto?",
-        "producto_cotizado": "Disco de Freno Delantero Ventilado Honda CB 190R",
-        "monto_total_soles": 110.0,
-        "hora_del_dia": 0,
-        "es_fuera_horario": true,
-        "clase_real": "ESTADO_PEDIDO",
-        "clase_predicha": "ESTADO_PEDIDO",
-        "confianza_modelo": 0.9858,
+        "texto_cliente": "Vendo lote de terreno urbano en Canta de 120m2 con documentos en regla, trato directo con propietario",
+        "producto_cotizado": "SIN_PRODUCTO",
+        "monto_total_soles": 0.0,
+        "hora_del_dia": 11,
+        "es_fuera_horario": false,
+        "clase_real": "SPAM",
+        "clase_predicha": "SPAM",
+        "confianza_modelo": 0.9999,
         "resultado": "ACIERTO"
       },
       {
         "caso_num": 30,
-        "id_conversacion": "35b30874-591c-428f-b754-c5ec60a78c20",
+        "id_conversacion": "ea1fca65-e27a-484d-a548-21d07fcd9eb1",
         "origen": "real",
-        "texto_cliente": "Maestro una consulta técnica, ¿el Biela Completa con Rodaje TVS King 200 de la Bajaj RE 205 le hace a la TVS King 200 o cambia la medida?",
+        "texto_cliente": "Importadora mayorista ofrece zapatillas deportivas réplica A1 por cajón cerrado, catálogo por Telegram",
         "producto_cotizado": "SIN_PRODUCTO",
-        "monto_total_soles": 95.0,
-        "hora_del_dia": 12,
+        "monto_total_soles": 0.0,
+        "hora_del_dia": 16,
         "es_fuera_horario": false,
-        "clase_real": "CONSULTA_TECNICA",
-        "clase_predicha": "CONSULTA_TECNICA",
-        "confianza_modelo": 0.9918,
+        "clase_real": "SPAM",
+        "clase_predicha": "SPAM",
+        "confianza_modelo": 0.9902,
         "resultado": "ACIERTO"
       }
     ]
@@ -545,182 +568,207 @@
       {
         "algoritmo": "K-Means (k=3)",
         "k": 3,
-        "silhouette_score": 0.2613,
-        "davies_bouldin_index": 1.5549,
-        "inercia": 2161.44
+        "silhouette_score": 0.2627,
+        "davies_bouldin_index": 1.5525,
+        "inercia": 2175.43
       },
       {
         "algoritmo": "K-Means (k=4)",
         "k": 4,
-        "silhouette_score": 0.3003,
-        "davies_bouldin_index": 1.3078,
-        "inercia": 1836.99
+        "silhouette_score": 0.282,
+        "davies_bouldin_index": 1.3738,
+        "inercia": 1816.87
       },
       {
         "algoritmo": "K-Means (k=5)",
         "k": 5,
-        "silhouette_score": 0.3099,
-        "davies_bouldin_index": 1.0951,
-        "inercia": 1488.04
+        "silhouette_score": 0.2756,
+        "davies_bouldin_index": 1.2622,
+        "inercia": 1566.5
       },
       {
         "algoritmo": "Jerárquico Aglomerativo (k=4)",
         "k": 4,
-        "silhouette_score": 0.2892,
-        "davies_bouldin_index": 1.178,
+        "silhouette_score": 0.2712,
+        "davies_bouldin_index": 1.4787,
         "inercia": 0.0
       }
     ],
-    "silhouette_ganador": 0.3003,
-    "davies_bouldin_ganador": 1.3078,
+    "silhouette_ganador": 0.282,
+    "davies_bouldin_ganador": 1.3738,
     "perfiles_segmentos": [
       {
         "cluster_id": 0,
-        "nombre_segmento": "Segmento Publicitario / Ruido Filtrado (0% Conversión)",
-        "cantidad_registros": 194,
-        "porcentaje_total": 37.3,
-        "intencion_dominante": "SPAM",
-        "pct_fuera_horario": 0.0,
-        "monto_promedio_soles": 95.69,
-        "longitud_promedio_chars": 121.0,
-        "accion_negocio_derivada": "Archivo silencioso automático sin alertar al vendedor de mostrador."
-      },
-      {
-        "cluster_id": 1,
-        "nombre_segmento": "Segmento Nocturno de Compra Urgente y Despacho Rápido",
-        "cantidad_registros": 83,
-        "porcentaje_total": 16.0,
+        "nombre_segmento": "Segmento Nocturno de Compra Urgente y Mayor Ticket",
+        "cantidad_registros": 121,
+        "porcentaje_total": 23.3,
         "intencion_dominante": "COTIZACION",
         "pct_fuera_horario": 100.0,
-        "monto_promedio_soles": 81.98,
-        "longitud_promedio_chars": 122.2,
+        "monto_promedio_soles": 85.98,
+        "longitud_promedio_chars": 123.8,
         "accion_negocio_derivada": "Respuesta en 1.3 s con stock real PostgreSQL y QR Yape/Plin para cierre nocturno."
       },
       {
+        "cluster_id": 1,
+        "nombre_segmento": "Segmento Nocturno de Seguimiento Posventa y Consultas Rápidas",
+        "cantidad_registros": 95,
+        "porcentaje_total": 18.3,
+        "intencion_dominante": "COTIZACION",
+        "pct_fuera_horario": 100.0,
+        "monto_promedio_soles": 74.11,
+        "longitud_promedio_chars": 126.5,
+        "accion_negocio_derivada": "Confirmación automática de estado de pedido o derivación prioritaria de primer turno."
+      },
+      {
         "cluster_id": 2,
-        "nombre_segmento": "Segmento Preventa Técnica y Compatibilidad Bajaj/TVS",
-        "cantidad_registros": 104,
-        "porcentaje_total": 20.0,
-        "intencion_dominante": "CONSULTA_TECNICA",
+        "nombre_segmento": "Segmento Diurno de Cotización Directa y Confirmación de Pedido",
+        "cantidad_registros": 192,
+        "porcentaje_total": 36.9,
+        "intencion_dominante": "COTIZACION",
         "pct_fuera_horario": 0.0,
-        "monto_promedio_soles": 61.39,
-        "longitud_promedio_chars": 134.2,
-        "accion_negocio_derivada": "Envío automático de ficha de compatibilidad y sugerencia de repuesto en stock."
+        "monto_promedio_soles": 105.21,
+        "longitud_promedio_chars": 119.2,
+        "accion_negocio_derivada": "Cotización instantánea y validación asistida de comprobante de pago para recojo."
       },
       {
         "cluster_id": 3,
         "nombre_segmento": "Segmento Preventa Técnica y Compatibilidad Bajaj/TVS",
-        "cantidad_registros": 139,
-        "porcentaje_total": 26.7,
+        "cantidad_registros": 112,
+        "porcentaje_total": 21.5,
         "intencion_dominante": "CONSULTA_TECNICA",
-        "pct_fuera_horario": 100.0,
-        "monto_promedio_soles": 105.59,
-        "longitud_promedio_chars": 128.6,
+        "pct_fuera_horario": 0.0,
+        "monto_promedio_soles": 50.97,
+        "longitud_promedio_chars": 139.2,
         "accion_negocio_derivada": "Envío automático de ficha de compatibilidad y sugerencia de repuesto en stock."
       }
     ]
   },
   "modelos_comparados": {
     "Línea Base (DummyClassifier)": {
+      "espacio_busqueda_param_grid": {
+        "clf__strategy": [
+          "stratified",
+          "most_frequent"
+        ]
+      },
       "mejores_hiperparametros": {
         "clf__strategy": "stratified"
       },
-      "cv_f1_macro_mean": 0.2706,
-      "train_accuracy": 0.273,
-      "train_f1_macro": 0.274,
-      "test_accuracy": 0.2551,
-      "test_precision_macro": 0.2487,
-      "test_recall_macro": 0.2545,
-      "test_f1_macro": 0.2489,
-      "test_f1_weighted": 0.2492,
-      "gap_overfitting_f1": 0.0251,
+      "cv_f1_macro_mean": 0.2579,
+      "cv_f1_macro_std": 0.0791,
+      "train_accuracy": 0.2423,
+      "train_f1_macro": 0.2431,
+      "test_accuracy": 0.1531,
+      "test_precision_macro": 0.1467,
+      "test_recall_macro": 0.1475,
+      "test_f1_macro": 0.1441,
+      "test_f1_weighted": 0.1489,
+      "test_roc_auc_ovr": 0.4314,
+      "gap_overfitting_f1": 0.0991,
       "matriz_confusion": [
         [
           6,
           10,
-          6,
+          7,
           4
         ],
         [
+          8,
           6,
-          6,
-          3,
-          10
+          9,
+          2
         ],
         [
-          8,
-          8,
-          3,
-          4
+          9,
+          11,
+          2,
+          3
         ],
         [
-          6,
-          5,
+          4,
           3,
-          10
+          13,
+          1
         ]
       ],
       "reporte_por_clase": {
         "COTIZACION": {
-          "precision": 0.23076923076923078,
-          "recall": 0.23076923076923078,
-          "f1-score": 0.23076923076923078,
-          "support": 26.0
+          "precision": 0.2222222222222222,
+          "recall": 0.2222222222222222,
+          "f1-score": 0.2222222222222222,
+          "support": 27.0
         },
         "CONSULTA_TECNICA": {
-          "precision": 0.20689655172413793,
+          "precision": 0.2,
           "recall": 0.24,
-          "f1-score": 0.2222222222222222,
+          "f1-score": 0.21818181818181817,
           "support": 25.0
         },
         "ESTADO_PEDIDO": {
-          "precision": 0.2,
-          "recall": 0.13043478260869565,
-          "f1-score": 0.15789473684210525,
-          "support": 23.0
+          "precision": 0.06451612903225806,
+          "recall": 0.08,
+          "f1-score": 0.07142857142857142,
+          "support": 25.0
         },
         "SPAM": {
-          "precision": 0.35714285714285715,
-          "recall": 0.4166666666666667,
-          "f1-score": 0.38461538461538464,
-          "support": 24.0
+          "precision": 0.1,
+          "recall": 0.047619047619047616,
+          "f1-score": 0.06451612903225806,
+          "support": 21.0
         },
-        "accuracy": 0.25510204081632654,
+        "accuracy": 0.15306122448979592,
         "macro avg": {
-          "precision": 0.24870215990905647,
-          "recall": 0.2544676700111483,
-          "f1-score": 0.2488753936122357,
+          "precision": 0.14668458781362007,
+          "recall": 0.14746031746031746,
+          "f1-score": 0.14408718521621744,
           "support": 98.0
         },
         "weighted avg": {
-          "precision": 0.2484065547401227,
-          "recall": 0.25510204081632654,
-          "f1-score": 0.24916228299686946,
+          "precision": 0.1501316655694536,
+          "recall": 0.15306122448979592,
+          "f1-score": 0.14892957601976692,
           "support": 98.0
         }
       }
     },
     "SVM (Support Vector Machine)": {
+      "espacio_busqueda_param_grid": {
+        "clf__C": [
+          "0.25",
+          "0.35",
+          "0.5"
+        ],
+        "clf__kernel": [
+          "linear",
+          "rbf"
+        ],
+        "clf__class_weight": [
+          "None",
+          "balanced"
+        ]
+      },
       "mejores_hiperparametros": {
         "clf__C": 0.5,
         "clf__class_weight": null,
         "clf__kernel": "linear"
       },
-      "cv_f1_macro_mean": 0.9441,
-      "train_accuracy": 0.9898,
-      "train_f1_macro": 0.9898,
-      "test_accuracy": 0.9388,
-      "test_precision_macro": 0.9418,
-      "test_recall_macro": 0.9395,
-      "test_f1_macro": 0.9404,
-      "test_f1_weighted": 0.9391,
-      "gap_overfitting_f1": 0.0493,
+      "cv_f1_macro_mean": 0.9531,
+      "cv_f1_macro_std": 0.0277,
+      "train_accuracy": 0.9872,
+      "train_f1_macro": 0.9878,
+      "test_accuracy": 0.949,
+      "test_precision_macro": 0.9563,
+      "test_recall_macro": 0.9507,
+      "test_f1_macro": 0.9523,
+      "test_f1_weighted": 0.9496,
+      "test_roc_auc_ovr": 0.9981,
+      "gap_overfitting_f1": 0.0355,
       "matriz_confusion": [
         [
-          24,
+          26,
           1,
           0,
-          1
+          0
         ],
         [
           2,
@@ -729,175 +777,305 @@
           0
         ],
         [
+          2,
           0,
-          1,
-          22,
+          23,
           0
         ],
         [
-          1,
           0,
           0,
-          23
+          0,
+          21
         ]
       ],
       "reporte_por_clase": {
         "COTIZACION": {
-          "precision": 0.8888888888888888,
-          "recall": 0.9230769230769231,
-          "f1-score": 0.9056603773584906,
-          "support": 26.0
+          "precision": 0.8666666666666667,
+          "recall": 0.9629629629629629,
+          "f1-score": 0.9122807017543859,
+          "support": 27.0
         },
         "CONSULTA_TECNICA": {
-          "precision": 0.92,
+          "precision": 0.9583333333333334,
           "recall": 0.92,
-          "f1-score": 0.92,
+          "f1-score": 0.9387755102040817,
           "support": 25.0
         },
         "ESTADO_PEDIDO": {
           "precision": 1.0,
-          "recall": 0.9565217391304348,
-          "f1-score": 0.9777777777777777,
-          "support": 23.0
+          "recall": 0.92,
+          "f1-score": 0.9583333333333334,
+          "support": 25.0
         },
         "SPAM": {
-          "precision": 0.9583333333333334,
-          "recall": 0.9583333333333334,
-          "f1-score": 0.9583333333333334,
-          "support": 24.0
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 21.0
         },
-        "accuracy": 0.9387755102040817,
+        "accuracy": 0.9489795918367347,
         "macro avg": {
-          "precision": 0.9418055555555556,
-          "recall": 0.9394829988851728,
-          "f1-score": 0.9404428721174005,
+          "precision": 0.95625,
+          "recall": 0.9507407407407408,
+          "f1-score": 0.9523473863229502,
           "support": 98.0
         },
         "weighted avg": {
-          "precision": 0.9399092970521542,
-          "recall": 0.9387755102040817,
-          "f1-score": 0.9391434561245883,
+          "precision": 0.9526360544217687,
+          "recall": 0.9489795918367347,
+          "f1-score": 0.9495846942428959,
           "support": 98.0
         }
       }
     },
     "Regresión Logística Multiclase": {
+      "espacio_busqueda_param_grid": {
+        "clf__C": [
+          "0.3",
+          "0.6",
+          "1.0"
+        ],
+        "clf__solver": [
+          "lbfgs"
+        ],
+        "clf__class_weight": [
+          "None",
+          "balanced"
+        ]
+      },
       "mejores_hiperparametros": {
         "clf__C": 1.0,
-        "clf__class_weight": null,
+        "clf__class_weight": "balanced",
         "clf__solver": "lbfgs"
       },
-      "cv_f1_macro_mean": 0.9417,
+      "cv_f1_macro_mean": 0.9657,
+      "cv_f1_macro_std": 0.0165,
       "train_accuracy": 0.9821,
-      "train_f1_macro": 0.9824,
-      "test_accuracy": 0.9286,
-      "test_precision_macro": 0.933,
-      "test_recall_macro": 0.9295,
-      "test_f1_macro": 0.9307,
-      "test_f1_weighted": 0.9291,
-      "gap_overfitting_f1": 0.0517,
+      "train_f1_macro": 0.9834,
+      "test_accuracy": 0.949,
+      "test_precision_macro": 0.9563,
+      "test_recall_macro": 0.9507,
+      "test_f1_macro": 0.9523,
+      "test_f1_weighted": 0.9496,
+      "test_roc_auc_ovr": 0.9956,
+      "gap_overfitting_f1": 0.031,
       "matriz_confusion": [
         [
-          24,
+          26,
           1,
-          0,
-          1
-        ],
-        [
-          3,
-          22,
           0,
           0
         ],
         [
+          2,
+          23,
           0,
-          1,
-          22,
           0
         ],
         [
-          1,
+          2,
+          0,
+          23,
+          0
+        ],
+        [
           0,
           0,
-          23
+          0,
+          21
         ]
       ],
       "reporte_por_clase": {
         "COTIZACION": {
-          "precision": 0.8571428571428571,
-          "recall": 0.9230769230769231,
-          "f1-score": 0.8888888888888888,
-          "support": 26.0
+          "precision": 0.8666666666666667,
+          "recall": 0.9629629629629629,
+          "f1-score": 0.9122807017543859,
+          "support": 27.0
         },
         "CONSULTA_TECNICA": {
-          "precision": 0.9166666666666666,
-          "recall": 0.88,
-          "f1-score": 0.8979591836734694,
+          "precision": 0.9583333333333334,
+          "recall": 0.92,
+          "f1-score": 0.9387755102040817,
           "support": 25.0
         },
         "ESTADO_PEDIDO": {
           "precision": 1.0,
-          "recall": 0.9565217391304348,
-          "f1-score": 0.9777777777777777,
-          "support": 23.0
+          "recall": 0.92,
+          "f1-score": 0.9583333333333334,
+          "support": 25.0
         },
         "SPAM": {
-          "precision": 0.9583333333333334,
-          "recall": 0.9583333333333334,
-          "f1-score": 0.9583333333333334,
-          "support": 24.0
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 21.0
         },
-        "accuracy": 0.9285714285714286,
+        "accuracy": 0.9489795918367347,
         "macro avg": {
-          "precision": 0.9330357142857143,
-          "recall": 0.9294829988851728,
-          "f1-score": 0.9307397959183674,
+          "precision": 0.95625,
+          "recall": 0.9507407407407408,
+          "f1-score": 0.9523473863229502,
           "support": 98.0
         },
         "weighted avg": {
-          "precision": 0.9306365403304179,
-          "recall": 0.9285714285714286,
-          "f1-score": 0.9290712203248647,
+          "precision": 0.9526360544217687,
+          "recall": 0.9489795918367347,
+          "f1-score": 0.9495846942428959,
           "support": 98.0
         }
       }
     },
     "Random Forest": {
+      "espacio_busqueda_param_grid": {
+        "clf__n_estimators": [
+          "120",
+          "150"
+        ],
+        "clf__max_depth": [
+          "8",
+          "12"
+        ],
+        "clf__min_samples_leaf": [
+          "2",
+          "3"
+        ]
+      },
       "mejores_hiperparametros": {
         "clf__max_depth": 12,
         "clf__min_samples_leaf": 2,
         "clf__n_estimators": 120
       },
-      "cv_f1_macro_mean": 0.9544,
-      "train_accuracy": 0.9872,
-      "train_f1_macro": 0.9873,
-      "test_accuracy": 0.8776,
-      "test_precision_macro": 0.8908,
-      "test_recall_macro": 0.8765,
-      "test_f1_macro": 0.8805,
-      "test_f1_weighted": 0.8792,
-      "gap_overfitting_f1": 0.1068,
+      "cv_f1_macro_mean": 0.9547,
+      "cv_f1_macro_std": 0.0181,
+      "train_accuracy": 0.9949,
+      "train_f1_macro": 0.9952,
+      "test_accuracy": 0.898,
+      "test_precision_macro": 0.9126,
+      "test_recall_macro": 0.8893,
+      "test_f1_macro": 0.8936,
+      "test_f1_weighted": 0.8961,
+      "test_roc_auc_ovr": 0.9985,
+      "gap_overfitting_f1": 0.1016,
       "matriz_confusion": [
         [
+          26,
+          0,
+          1,
+          0
+        ],
+        [
+          2,
+          23,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
           24,
-          0,
-          0,
-          2
-        ],
-        [
-          3,
-          22,
-          0,
           0
         ],
         [
-          0,
-          3,
-          20,
-          0
-        ],
-        [
+          2,
           4,
+          0,
+          15
+        ]
+      ],
+      "reporte_por_clase": {
+        "COTIZACION": {
+          "precision": 0.8387096774193549,
+          "recall": 0.9629629629629629,
+          "f1-score": 0.896551724137931,
+          "support": 27.0
+        },
+        "CONSULTA_TECNICA": {
+          "precision": 0.8518518518518519,
+          "recall": 0.92,
+          "f1-score": 0.8846153846153846,
+          "support": 25.0
+        },
+        "ESTADO_PEDIDO": {
+          "precision": 0.96,
+          "recall": 0.96,
+          "f1-score": 0.96,
+          "support": 25.0
+        },
+        "SPAM": {
+          "precision": 1.0,
+          "recall": 0.7142857142857143,
+          "f1-score": 0.8333333333333334,
+          "support": 21.0
+        },
+        "accuracy": 0.8979591836734694,
+        "macro avg": {
+          "precision": 0.9126403823178016,
+          "recall": 0.8893121693121693,
+          "f1-score": 0.8936251105216623,
+          "support": 98.0
+        },
+        "weighted avg": {
+          "precision": 0.907565893741009,
+          "recall": 0.8979591836734694,
+          "f1-score": 0.8961457261949873,
+          "support": 98.0
+        }
+      }
+    },
+    "K-Nearest Neighbors (KNN)": {
+      "espacio_busqueda_param_grid": {
+        "clf__n_neighbors": [
+          "9",
+          "13",
+          "15"
+        ],
+        "clf__weights": [
+          "distance",
+          "uniform"
+        ],
+        "clf__metric": [
+          "cosine",
+          "euclidean"
+        ]
+      },
+      "mejores_hiperparametros": {
+        "clf__metric": "cosine",
+        "clf__n_neighbors": 13,
+        "clf__weights": "distance"
+      },
+      "cv_f1_macro_mean": 0.9513,
+      "cv_f1_macro_std": 0.0208,
+      "train_accuracy": 1.0,
+      "train_f1_macro": 1.0,
+      "test_accuracy": 0.9184,
+      "test_precision_macro": 0.9295,
+      "test_recall_macro": 0.9196,
+      "test_f1_macro": 0.9227,
+      "test_f1_weighted": 0.9196,
+      "test_roc_auc_ovr": 0.9921,
+      "gap_overfitting_f1": 0.0773,
+      "matriz_confusion": [
+        [
+          25,
+          2,
+          0,
+          0
+        ],
+        [
+          2,
+          23,
+          0,
+          0
+        ],
+        [
+          2,
+          1,
+          22,
+          0
+        ],
+        [
+          1,
           0,
           0,
           20
@@ -905,121 +1083,40 @@
       ],
       "reporte_por_clase": {
         "COTIZACION": {
-          "precision": 0.7741935483870968,
-          "recall": 0.9230769230769231,
-          "f1-score": 0.8421052631578947,
-          "support": 26.0
+          "precision": 0.8333333333333334,
+          "recall": 0.9259259259259259,
+          "f1-score": 0.8771929824561403,
+          "support": 27.0
         },
         "CONSULTA_TECNICA": {
-          "precision": 0.88,
-          "recall": 0.88,
-          "f1-score": 0.88,
+          "precision": 0.8846153846153846,
+          "recall": 0.92,
+          "f1-score": 0.9019607843137255,
           "support": 25.0
         },
         "ESTADO_PEDIDO": {
           "precision": 1.0,
-          "recall": 0.8695652173913043,
-          "f1-score": 0.9302325581395349,
-          "support": 23.0
-        },
-        "SPAM": {
-          "precision": 0.9090909090909091,
-          "recall": 0.8333333333333334,
-          "f1-score": 0.8695652173913043,
-          "support": 24.0
-        },
-        "accuracy": 0.8775510204081632,
-        "macro avg": {
-          "precision": 0.8908211143695015,
-          "recall": 0.8764938684503902,
-          "f1-score": 0.8804757596721834,
-          "support": 98.0
-        },
-        "weighted avg": {
-          "precision": 0.8872164701657789,
-          "recall": 0.8775510204081632,
-          "f1-score": 0.8791801111908762,
-          "support": 98.0
-        }
-      }
-    },
-    "K-Nearest Neighbors (KNN)": {
-      "mejores_hiperparametros": {
-        "clf__metric": "cosine",
-        "clf__n_neighbors": 15,
-        "clf__weights": "distance"
-      },
-      "cv_f1_macro_mean": 0.9286,
-      "train_accuracy": 1.0,
-      "train_f1_macro": 1.0,
-      "test_accuracy": 0.9082,
-      "test_precision_macro": 0.9137,
-      "test_recall_macro": 0.9095,
-      "test_f1_macro": 0.9111,
-      "test_f1_weighted": 0.909,
-      "gap_overfitting_f1": 0.0889,
-      "matriz_confusion": [
-        [
-          23,
-          1,
-          0,
-          2
-        ],
-        [
-          3,
-          22,
-          0,
-          0
-        ],
-        [
-          0,
-          1,
-          22,
-          0
-        ],
-        [
-          2,
-          0,
-          0,
-          22
-        ]
-      ],
-      "reporte_por_clase": {
-        "COTIZACION": {
-          "precision": 0.8214285714285714,
-          "recall": 0.8846153846153846,
-          "f1-score": 0.8518518518518519,
-          "support": 26.0
-        },
-        "CONSULTA_TECNICA": {
-          "precision": 0.9166666666666666,
           "recall": 0.88,
-          "f1-score": 0.8979591836734694,
+          "f1-score": 0.9361702127659575,
           "support": 25.0
         },
-        "ESTADO_PEDIDO": {
-          "precision": 1.0,
-          "recall": 0.9565217391304348,
-          "f1-score": 0.9777777777777777,
-          "support": 23.0
-        },
         "SPAM": {
-          "precision": 0.9166666666666666,
-          "recall": 0.9166666666666666,
-          "f1-score": 0.9166666666666666,
-          "support": 24.0
+          "precision": 1.0,
+          "recall": 0.9523809523809523,
+          "f1-score": 0.975609756097561,
+          "support": 21.0
         },
-        "accuracy": 0.9081632653061225,
+        "accuracy": 0.9183673469387755,
         "macro avg": {
-          "precision": 0.9136904761904762,
-          "recall": 0.9094509476031215,
-          "f1-score": 0.9110638699924414,
+          "precision": 0.9294871794871795,
+          "recall": 0.9195767195767195,
+          "f1-score": 0.9227334339083461,
           "support": 98.0
         },
         "weighted avg": {
-          "precision": 0.9109572400388727,
-          "recall": 0.9081632653061225,
-          "f1-score": 0.9090409860089161,
+          "precision": 0.9246467817896389,
+          "recall": 0.9183673469387755,
+          "f1-score": 0.919645819707721,
           "support": 98.0
         }
       }
@@ -1027,76 +1124,103 @@
   },
   "casos_error_test_set": [
     {
-      "id_conversacion": "277fecc6-196b-48f1-9ed8-9c47bb88854e",
+      "id_conversacion": "5bf88d1d-06ad-4920-aff7-ff5d3b1d12cf",
       "origen": "simulado",
-      "texto_cliente": "Maestro, mi bajajita bota humo y pierde fuerza, ¿cuánto me cuesta el Estator Bobina de Encendido 12 Polos Bajaj RE 4T para repararla hoy?, confírmame stock inmediato para pagarlo ahorita",
-      "clase_real": "COTIZACION",
-      "clase_predicha": "CONSULTA_TECNICA",
-      "confianza_prediccion": 0.9221,
+      "texto_cliente": "Amigo, ¿el Kit de Jebe de Trapecio y Amortiguador Bajaj que venden en la web viene con sus retenes y empaquetaduras o se compran aparte?",
+      "clase_real": "CONSULTA_TECNICA",
+      "clase_predicha": "COTIZACION",
+      "confianza_prediccion": 0.6407,
+      "hora_del_dia": 22
+    },
+    {
+      "id_conversacion": "8f8dd995-1127-4cb2-b472-99b68f0ce422",
+      "origen": "simulado",
+      "texto_cliente": "Hola, hice un pedido de Aceite Motul 5100 4T 20W50 Semisintético 1L ayer, ¿tienen stock disponible para recogerlo ahora o cuánto demora?",
+      "clase_real": "ESTADO_PEDIDO",
+      "clase_predicha": "COTIZACION",
+      "confianza_prediccion": 0.7174,
       "hora_del_dia": 9
     },
     {
-      "id_conversacion": "34e50699-c8eb-427a-a3a4-e70e9dbc15c0",
+      "id_conversacion": "2b840c67-2e18-4554-8ae2-8e66ae8a7813",
       "origen": "simulado",
-      "texto_cliente": "Maestro, mi bajajita bota humo y pierde fuerza, ¿cuánto me cuesta el cable de embrague original bajaj re 4t para repararla hoy?",
-      "clase_real": "CONSULTA_TECNICA",
+      "texto_cliente": "Hola, hice un pedido de Cigüeñal Completo Bajaj Torito RE 205 ayer, ¿tienen stock disponible para recogerlo ahora o cuánto demora?",
+      "clase_real": "ESTADO_PEDIDO",
       "clase_predicha": "COTIZACION",
-      "confianza_prediccion": 0.7597,
-      "hora_del_dia": 9
+      "confianza_prediccion": 0.8024,
+      "hora_del_dia": 10
     },
     {
-      "id_conversacion": "d0a96757-a870-4d97-90e6-717638583966",
+      "id_conversacion": "d9e92758-76b9-4436-8b46-ef3395e7f614",
       "origen": "simulado",
-      "texto_cliente": "Maestro, mi bajajita bota humo y pierde fuerza, ¿cuánto me cuesta el Cigüeñal Completo Bajaj Torito RE 205 para repararla hoy?",
+      "texto_cliente": "Amigo, ¿el regulador rectificador de voltaje trifásico tvs king que venden en la web viene con sus retenes y empaquetaduras o se compran aparte?",
       "clase_real": "CONSULTA_TECNICA",
       "clase_predicha": "COTIZACION",
-      "confianza_prediccion": 0.7097,
-      "hora_del_dia": 16
-    },
-    {
-      "id_conversacion": "5487fd4f-ebb7-4385-aa0b-7b14f2e9702d",
-      "origen": "real",
-      "texto_cliente": "Hola amigos de Comas, vendemos lotes de Amortiguador Delantero con Resorte Bajaj Torito importados al por mayor para tiendas, precios de liquidación por cajón",
-      "clase_real": "COTIZACION",
-      "clase_predicha": "SPAM",
-      "confianza_prediccion": 0.8625,
+      "confianza_prediccion": 0.778,
       "hora_del_dia": 7
     },
     {
-      "id_conversacion": "eedf4f78-dc99-4976-808e-c990c9f279a8",
-      "origen": "real",
-      "texto_cliente": "Acabo de recoger mi bujía de iridio ngk cpr8eaix-9 bajaj/pulsar de mi orden web, pero mi mecánico pregunta qué medida de chicler lleva",
-      "clase_real": "ESTADO_PEDIDO",
-      "clase_predicha": "CONSULTA_TECNICA",
-      "confianza_prediccion": 0.849,
-      "hora_del_dia": 0
-    },
-    {
-      "id_conversacion": "98cd2655-5297-41ad-adba-948427591ad4",
+      "id_conversacion": "e5304b87-8e48-4bc0-a9c5-0d692c6cdb5a",
       "origen": "simulado",
-      "texto_cliente": "Felicidades, tu número de WhatsApp ha sido sorteado para un bono de S/ 1,000, envía tus datos bancarios aquí código promo 966",
-      "clase_real": "SPAM",
-      "clase_predicha": "COTIZACION",
-      "confianza_prediccion": 0.655,
-      "hora_del_dia": 10
+      "texto_cliente": "Hola mano, ¿el Parabrisas Laminado Curvo Bajaj Torito RE cuánto sale y sabes si le hace también a la Bajaj modelo 2018?",
+      "clase_real": "COTIZACION",
+      "clase_predicha": "CONSULTA_TECNICA",
+      "confianza_prediccion": 0.8342,
+      "hora_del_dia": 23
     }
   ],
-  "hash_artefacto_joblib": "135c43a3eb29",
-  "fecha_entrenamiento": "2026-11-24 09:17:26",
+  "hash_artefacto_joblib": "3e43fb2482f6",
+  "peso_joblib_kb": 68.3,
+  "fecha_entrenamiento": "2026-11-24 19:02:36",
   "verificacion_coherencia_4_2": {
     "cumple_7_criterios": true,
+    "auditoria_csv_exacta": {
+      "filas_totales": 520,
+      "columnas_totales": 13,
+      "nombres_columnas": [
+        "id_conversacion",
+        "origen",
+        "timestamp_primer_mensaje",
+        "timestamp_respuesta_bot",
+        "texto_cliente",
+        "intencion_predicha",
+        "confianza_modelo",
+        "producto_cotizado",
+        "monto_total",
+        "metodo_pago",
+        "estado_pedido",
+        "hora_del_dia",
+        "es_fuera_horario"
+      ],
+      "celdas_nulas_nan": 0,
+      "celdas_vacias_string": 0,
+      "conteo_telefonos_9_digitos_pii": 0,
+      "rango_longitud_caracteres": [
+        63,
+        209
+      ],
+      "rango_monto_total_soles": [
+        0.0,
+        960.0
+      ],
+      "rango_monto_positivo_soles": [
+        18.0,
+        960.0
+      ]
+    },
     "criterio_1_escala_negocio": {
       "total_registros": 520,
-      "ticket_promedio_soles": 150.74,
+      "ticket_promedio_soles": 127.89,
       "rango_precios_soles": [
         18.0,
-        3150.0
+        960.0
       ],
-      "pct_consultas_fuera_horario": 42.69,
+      "pct_consultas_fuera_horario": 41.54,
       "estado": "CUMPLE"
     },
     "criterio_2_rangos_y_unidades": {
       "violaciones_monto_negativo": 0,
+      "violaciones_monto_mayor_980": 0,
       "violaciones_hora_fuera_0_23": 0,
       "violaciones_confianza_fuera_0_1": 0,
       "violaciones_texto_vacio": 0,
@@ -1109,13 +1233,13 @@
       "estado": "CUMPLE"
     },
     "criterio_4_relaciones_plausibles": {
-      "pct_menciona_precio_en_COTIZACION": 87.59,
-      "pct_menciona_pago_en_ESTADO_PEDIDO": 87.9,
+      "pct_menciona_precio_en_COTIZACION": 86.9,
+      "pct_menciona_pago_en_ESTADO_PEDIDO": 88.72,
       "pct_menciona_duda_en_CONSULTA_TECNICA": 90.23,
       "estado": "CUMPLE"
     },
     "criterio_5_senal_ni_nula_ni_perfecta": {
-      "descripcion": "Supera ampliamente a Dummy (~0.26) sin llegar a 1.00 artificial (~0.94-0.96).",
+      "descripcion": "Supera ampliamente a Dummy (~0.25) sin llegar a 1.00 artificial (~0.91-0.94).",
       "estado": "CUMPLE"
     },
     "criterio_6_coherencia_contrato_apf2": {
@@ -1138,35 +1262,39 @@
       "estado": "CUMPLE"
     },
     "criterio_7_mezcla_real_simulado": {
-      "registros_reales_totales": 130,
+      "registros_reales_totales": 30,
       "registros_reales_validacion_externa": 30,
-      "registros_reales_entrenamiento_bonificacion": 100,
-      "registros_simulados": 390,
-      "longitud_media_caracteres_real": 125.3,
-      "longitud_media_caracteres_simulado": 126.1,
+      "registros_reales_en_entrenamiento": 0,
+      "registros_simulados_modelado": 490,
+      "longitud_media_caracteres_real": 108.7,
+      "longitud_media_caracteres_simulado": 127.0,
       "estado": "CUMPLE"
     }
   },
   "demo_prediccion_registro_nuevo": {
-    "version_modelo": "v2.0.0-PROY-20261124",
+    "version_modelo": "v2.1.0-PROY-20261124",
     "umbral_decision": 0.68,
     "entrada_mvp_json": {
       "texto_cliente": "Buenas noches maestro, ¿tienes cilindro completo para mi bajajita Torito 4T RE 205 y cuánto cuesta?",
       "hora_del_dia": 21,
-      "es_fuera_horario": true
+      "umbral_decision": 0.68,
+      "simular_fallo_servicio": false,
+      "canal": "WEB_MVP"
     },
     "salida_modelo_json": {
       "intencion_predicha": "COTIZACION",
-      "confianza_modelo": 0.9323,
+      "confianza_modelo": 0.9803,
       "probabilidades": {
-        "CONSULTA_TECNICA": 0.0125,
-        "COTIZACION": 0.9323,
-        "ESTADO_PEDIDO": 0.0039,
-        "SPAM": 0.0513
+        "CONSULTA_TECNICA": 0.0056,
+        "COTIZACION": 0.9803,
+        "ESTADO_PEDIDO": 0.0018,
+        "SPAM": 0.0123
       },
       "monto_potencial_soles": 185.0,
       "requiere_derivacion_humana": false,
-      "explicacion_negocio": "El modelo detecta una OPORTUNIDAD DE VENTA INMEDIATA (COTIZACION) en horario nocturno para Cilindro Completo Torito Bajaj 4T (S/ 185.00) y responde en 1.3 s con stock real de PostgreSQL."
+      "version_modelo": "v2.1.0-PROY-20261124",
+      "modo_operacion": "INFERENCIA_ML_NORMAL",
+      "explicacion_negocio": "QUÉ PREDICE: Intención comercial de compra directa (COTIZACION). POR QUÉ GENERA LA VENTA: Identifica Cilindro Completo Torito Bajaj 4T (S/ 185.00) y responde en 1.31 s con stock real de PostgreSQL."
     }
   },
   "eda_resumen": {
@@ -1178,51 +1306,51 @@
       "texto_cliente": 0,
       "intencion_predicha": 0,
       "confianza_modelo": 0,
-      "producto_cotizado": 120,
-      "monto_total": 22,
-      "metodo_pago": 132,
+      "producto_cotizado": 0,
+      "monto_total": 0,
+      "metodo_pago": 0,
       "estado_pedido": 0,
       "hora_del_dia": 0,
       "es_fuera_horario": 0
     },
     "distribucion_clases": {
-      "COTIZACION": 137,
+      "COTIZACION": 145,
       "CONSULTA_TECNICA": 133,
-      "SPAM": 126,
-      "ESTADO_PEDIDO": 124
+      "ESTADO_PEDIDO": 133,
+      "SPAM": 109
     },
     "distribucion_origen": {
-      "simulado": 390,
-      "real": 130
+      "simulado": 490,
+      "real": 30
     },
-    "porcentaje_fuera_horario": 42.69,
+    "porcentaje_fuera_horario": 41.54,
     "outliers_iqr": {
       "monto_total": {
         "q1": 0.0,
-        "q3": 98.0,
-        "iqr": 98.0,
-        "limite_inferior": -147.0,
-        "limite_superior": 245.0,
-        "cantidad_outliers": 39,
-        "porcentaje_outliers": 7.5
+        "q3": 119.75,
+        "iqr": 119.75,
+        "limite_inferior": -179.62,
+        "limite_superior": 299.38,
+        "cantidad_outliers": 21,
+        "porcentaje_outliers": 4.04
       },
       "tiempo_respuesta_seg": {
-        "q1": 26.75,
-        "q3": 78.25,
-        "iqr": 51.5,
-        "limite_inferior": -50.5,
-        "limite_superior": 155.5,
-        "cantidad_outliers": 24,
-        "porcentaje_outliers": 4.62
+        "q1": 23.0,
+        "q3": 80.0,
+        "iqr": 57.0,
+        "limite_inferior": -62.5,
+        "limite_superior": 165.5,
+        "cantidad_outliers": 27,
+        "porcentaje_outliers": 5.19
       },
       "longitud_mensaje": {
-        "q1": 110.0,
-        "q3": 141.0,
+        "q1": 109.0,
+        "q3": 140.0,
         "iqr": 31.0,
-        "limite_inferior": 63.5,
-        "limite_superior": 187.5,
-        "cantidad_outliers": 11,
-        "porcentaje_outliers": 2.12
+        "limite_inferior": 62.5,
+        "limite_superior": 186.5,
+        "cantidad_outliers": 15,
+        "porcentaje_outliers": 2.88
       }
     }
   }

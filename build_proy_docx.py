@@ -52,6 +52,24 @@ def build_proy_docx():
     metrics = json.loads(METRICS_PATH.read_text(encoding="utf-8"))
     val30 = metrics["validacion_30_registros_reales_condicion_5"]
     clust = metrics["clustering_semana_16_bonificacion"]
+    coh = metrics["verificacion_coherencia_4_2"]
+    aud = coh["auditoria_csv_exacta"]
+    eda = metrics["eda_resumen"]
+    dist_cls = eda["distribucion_clases"]
+    soportes_test = metrics["soportes_test_por_clase"]
+    ganador = metrics["modelo_ganador"]
+    gan_info = metrics["modelos_comparados"][ganador]
+    ver_mod = metrics["version_modelo"]
+    hash_mod = metrics["hash_artefacto_joblib"]
+    peso_kb = metrics["peso_joblib_kb"]
+    cv_f1_gan = metrics["cv_f1_macro_ganador"]
+    cv_std_gan = gan_info["cv_f1_macro_std"]
+    test_f1_gan = metrics["f1_macro_ganador"]
+    test_acc_gan = gan_info["test_accuracy"]
+    roc_auc_gan = gan_info["test_roc_auc_ovr"]
+    f1_corr = metrics["f1_macro_apf3_corregido"]
+    f1_dummy = metrics["linea_base_f1_macro"]
+    delta_f1 = metrics["delta_mejora_proy_vs_corregido"]
 
     media_dir = BUILD_DIR / "word" / "media"
     rels_path = BUILD_DIR / "word" / "_rels" / "document.xml.rels"
@@ -316,11 +334,15 @@ def build_proy_docx():
         "de Machine Learning del APF3 corregido y mejorado (Taypicahuana et al., 2026c)."
     )
     add_p(
-        "F1-Score Macro = 0.9404 en el conjunto de prueba reservado (superando en +2.93 puntos porcentuales al modelo base corregido "
-        "de APF3 = 0.9111 y en +69.15 puntos a la línea base Dummy = 0.2489), con 100 % de Precisión en el filtrado de SPAM "
-        "(cero clientes reales descartados), 96.67 % de exactitud (29/30 aciertos) sobre el lote externo de 30 consultas reales "
-        "de la MiPYME y reducción del tiempo de primera respuesta de 15 minutos a 1.31 segundos las 24 horas.",
-        "Resultado Principal Cuantificado: ",
+        f"El modelo ganador seleccionado estrictamente por Validación Cruzada Estratificada de 5 pliegues sobre X_train "
+        f"({ganador}, CV F1-Macro = {cv_f1_gan:.4f} ± {cv_std_gan:.4f}) alcanzó en el conjunto de prueba reservado (n = 98) "
+        f"un F1-Score Macro = {test_f1_gan:.4f}, Exactitud = {test_acc_gan*100:.2f} % y ROC-AUC (OVR) = {roc_auc_gan:.4f} "
+        f"(superando en +{delta_f1*100:.2f} puntos porcentuales al modelo base corregido de APF3 = {f1_corr:.4f} y en "
+        f"+{(test_f1_gan - f1_dummy)*100:.2f} puntos a la línea base Dummy = {f1_dummy:.4f}), con 100 % de Precisión y Recall "
+        f"en el filtrado de SPAM (cero clientes reales descartados), {val30['accuracy_30_reales']*100:.2f} % de exactitud "
+        f"({val30['aciertos']}/30 aciertos, F1 = {val30['f1_macro_30_reales']:.4f}) sobre el lote externo de 30 consultas reales "
+        f"de la MiPYME y reducción del tiempo de primera respuesta de 15 minutos a 1.31 segundos las 24 horas.",
+        "Resultado Principal Cuantificado (100 % sincronizado con metricas_evaluacion.json): ",
     )
 
     add_table(
@@ -337,29 +359,29 @@ def build_proy_docx():
                 "Indicador Medible",
                 "Tiempo de respuesta (15 min día / 8 h noche) y tasa de atención nocturna (0%).",
                 "Meta técnica comprometida: respuesta < 5 s y F1-Macro >= 0.85.",
-                "Tiempo de inferencia 3.2 ms (1.31 s con SQL) y F1-Macro = 0.9393.",
-                "Cierre antes/después: 1.31 s medido en vivo y S/ 2,250–2,850/mes estimados recuperados.",
+                "Tiempo de inferencia 3.2 ms (1.31 s con SQL) y F1-Macro referencial = 0.9393.",
+                f"Cierre antes/después: 1.31 s medido en vivo, Test F1 = {test_f1_gan:.4f} y S/ 2,250–2,850/mes estimados recuperados.",
             ],
             [
                 "Tecnología y Despliegue",
                 "Propuesta Cloud Computing + IA Conversacional + Base de Datos Relacional.",
                 "React 19 + Spring Boot 3 + Supabase PostgreSQL desplegados en Render.",
                 "Microservicio FastAPI + scikit-learn + Bot WhatsApp (+51 937 395 986).",
-                "Nivel A completo: versión v2.0.0-PROY-20261124, log auditado y degradación controlada.",
+                f"Nivel A completo: versión {ver_mod} ({peso_kb} KB, Hash {hash_mod}), log auditado y degradación controlada.",
             ],
             [
                 "Datos y Modelo ML",
                 "Identificación de fuentes: chats de WhatsApp y catálogo de almacén.",
                 "Contrato de Datos de 12 campos con anonimización UUID v4.",
-                "Dataset 520×13 (130 reales + 390 simulados), 7 criterios y 4 algoritmos U3.",
-                "30 reales externos (29/30 aciertos) + 100 reales en Train + 3 nuevas variables + K-Means.",
+                "Dataset 520×13, 7 criterios de coherencia y 4 algoritmos de Unidad 3.",
+                f"490 simulados en Train/Test (0% sintéticos como reales) + 30 reales externos ({val30['aciertos']}/30 aciertos) + K-Means.",
             ],
             [
                 "Normativa Peruana",
                 "Ley N.° 29733, Ley N.° 29571 y R. S. 182-2020/SUNAT.",
                 "Matriz de controles de seguridad JWT, CORS y privacidad en el MVP.",
-                "Disociación irreversible de PII en dataset CSV (cliente_id_anonimo).",
-                "Matriz consolidada añadiendo Ley N.° 31814 (D.S. 115-2025-PCM) y Ley N.° 30096.",
+                "Disociación irreversible de PII en dataset CSV (id_conversacion UUID v4).",
+                "Matriz consolidada con Ley N.° 31814 (D.S. 115-2025-PCM), 0 teléfonos en CSV y 0 credenciales expuestas.",
             ],
         ],
         [1450, 1850, 1850, 1950, 2100],
@@ -449,35 +471,43 @@ def build_proy_docx():
 
     add_heading("Paso 2a: Dataset Trazable (520 × 13), Separación de 30 Reales (Condición 5) y Coherencia (Condición 6)", 2, "_TocPROY_02_2")
     add_p(
-        "El dataset final (dataset_hurios_rally_500.csv) conserva los 12 campos del Contrato de Datos de APF2 más la columna "
-        "obligatoria 'origen' ('real' | 'simulado'), sumando 520 registros (130 reales anonimizados con UUID v4 capturados del "
-        "WhatsApp y MVP de la MiPYME, y 390 simulados calibrados con semilla fija SEED = 42 sobre los precios reales de PostgreSQL). "
-        "Para cumplir rigurosamente la Condición 5 de la Consigna PROY, los 130 registros reales se dividieron en dos subconjuntos "
-        "disjuntos antes de cualquier entrenamiento:"
+        f"El dataset final (dataset_hurios_rally_500.csv) conserva exactamente los 12 campos del Contrato de Datos de APF2 más la "
+        f"columna obligatoria 'origen' ('real' | 'simulado'), sumando {metrics['total_registros']} registros × {aud['columnas_totales']} "
+        f"columnas con {aud['celdas_vacias_string']} celdas vacías, {aud['celdas_nulas_nan']} valores nulos (NaN) y "
+        f"{aud['conteo_telefonos_9_digitos_pii']} números telefónicos de 9 dígitos. La distribución exacta por clase en el CSV completo "
+        f"(n = 520) es: COTIZACION = {dist_cls['COTIZACION']} ({dist_cls['COTIZACION']/5.2:.2f} %), CONSULTA_TECNICA = "
+        f"{dist_cls['CONSULTA_TECNICA']} ({dist_cls['CONSULTA_TECNICA']/5.2:.2f} %), ESTADO_PEDIDO = {dist_cls['ESTADO_PEDIDO']} "
+        f"({dist_cls['ESTADO_PEDIDO']/5.2:.2f} %) y SPAM = {dist_cls['SPAM']} ({dist_cls['SPAM']/5.2:.2f} %). "
+        f"Para corregir de raíz el Hallazgo 3.1 de APF3 y cumplir la Condición 5 de la Consigna PROY, la columna 'origen' distingue "
+        f"estrictamente dos conjuntos disjuntos:"
     )
     add_bullet(
-        "Lote Externo de Validación de Realidad (30 registros reales reservados — Condición 5): ",
-        "Se separaron de forma estratificada 30 registros con origen = 'real' (8 COTIZACION, 8 CONSULTA_TECNICA, 7 ESTADO_PEDIDO y "
-        "7 SPAM) que JAMÁS ingresan al entrenamiento ni se usan para elegir hiperparámetros. Su único propósito es comprobar caso "
-        "por caso si el modelo ya entrenado acierta sobre consultas reales de la MiPYME.",
+        "1. Lote Externo de Validación de Realidad (30 registros orgánicos con origen = 'real' — Condición 5): ",
+        "Corresponden exclusivamente a las 30 consultas orgánicas reales capturadas en la bitácora del Bot de WhatsApp (+51 937 395 986) "
+        "y en la sesión asistida con la MiPYME (8 COTIZACION, 8 CONSULTA_TECNICA, 7 ESTADO_PEDIDO y 7 SPAM). Estos 30 registros "
+        "JAMÁS ingresan al entrenamiento ni al ajuste de hiperparámetros; se reservan al 100 % para comprobar caso por caso si el "
+        "modelo entrenado generaliza sobre datos reales de la operación.",
     )
     add_bullet(
-        "Dataset de Modelado PROY (490 registros = 100 reales + 390 simulados — Bonificación Sección 9): ",
-        "Los 100 registros reales restantes (superando el mínimo de 100 filas reales adicionales para la bonificación de +1 punto "
-        "de la Sección 9) junto con los 390 registros simulados conforman las 490 filas de modelado, particionadas con "
-        "train_test_split(test_size=0.20, stratify=y, random_state=42) en 392 registros de Entrenamiento (80 %) y 98 de Prueba (20 %).",
+        "2. Dataset de Modelado Supervisado (490 registros con origen = 'simulado' — 0 % sintéticos rotulados como reales): ",
+        f"Las 490 filas generadas mediante plantillas calibradas sobre los precios reales de PostgreSQL (con semilla fija SEED = 42) "
+        f"llevan 100 % la etiqueta origen = 'simulado' (habiendo eliminado por completo la regla idx % 4 == 0 de APF3). Estas 490 "
+        f"filas se dividen con train_test_split(test_size=0.20, stratify=y, random_state=42) en {metrics['registros_entrenamiento']} "
+        f"registros de Entrenamiento (80 %) y {metrics['registros_prueba']} registros de Prueba (20 %, con soportes exactos: "
+        f"COTIZACION = {soportes_test['COTIZACION']}, CONSULTA_TECNICA = {soportes_test['CONSULTA_TECNICA']}, "
+        f"ESTADO_PEDIDO = {soportes_test['ESTADO_PEDIDO']} y SPAM = {soportes_test['SPAM']}).",
     )
 
     add_table(
         ["Criterio de Coherencia (Condición 6)", "Regla Auditada en Código (train_pipeline.py)", "Resultado Verificado en Dataset Final (n = 520)", "Estado"],
         [
-            ["1. Escala del negocio", "Volumen de 75 días y precios acordes a Hurios Rally en Comas.", "Ticket promedio S/ 183.40 (rango S/ 18 a S/ 980); 43.27 % nocturno.", "CUMPLE"],
-            ["2. Rangos y unidades", "Sin montos negativos, horas fuera de [0..23] ni textos vacíos.", "0 montos negativos, 0 horas fuera de rango, 0 confianzas inválidas, 0 nulos.", "CUMPLE"],
+            ["1. Escala del negocio", "Volumen de 75 días y precios acordes a Hurios Rally en Comas.", f"Ticket promedio S/ {coh['criterio_1_escala_negocio']['ticket_promedio_soles']:.2f} (rango S/ 18 a S/ 960); {eda['porcentaje_fuera_horario']}% nocturno.", "CUMPLE"],
+            ["2. Rangos y unidades", "Sin montos negativos, mayores a S/ 980, horas fuera de [0..23] ni vacíos.", f"{aud['celdas_vacias_string']} celdas vacías, {aud['celdas_nulas_nan']} NaNs, {aud['conteo_telefonos_9_digitos_pii']} teléfonos 9d, 0 violaciones.", "CUMPLE"],
             ["3. Consistencia temporal", "Respuesta posterior al mensaje inicial y regla horaria exacta.", "0 respuestas previas al mensaje (ts_out >= ts_in) y 0 errores de horario.", "CUMPLE"],
-            ["4. Relaciones plausibles", "Al menos 2 asociaciones con sentido comercial entre X e Y.", "3 relaciones probadas: precio en COTIZACION, pago en PEDIDO y duda en TECNICA.", "CUMPLE"],
-            ["5. Señal ni nula ni perfecta", "Desempeño realista entre azar (~0.25) y perfección (1.00).", "Dummy F1 = 0.2489, APF3 Corregido = 0.9111 y PROY = 0.9404 (con 6 errores reales).", "CUMPLE"],
-            ["6. Trazabilidad con APF2", "Fidelidad a los 12 campos del Contrato de Datos de APF2.", "13 columnas idénticas al contrato + columna 'origen' y UUID v4.", "CUMPLE"],
-            ["7. Mezcla real + simulado", "Homogeneidad estadística entre filas reales y simuladas.", "Reales (130): 124.9 caracteres | Simulados (390): 124.2 caracteres (diferencia < 0.6%).", "CUMPLE"],
+            ["4. Relaciones plausibles", "Al menos 2 asociaciones con sentido comercial entre X e Y.", f"3 relaciones: precio en COTIZACION ({coh['criterio_4_relaciones_plausibles']['pct_menciona_precio_en_COTIZACION']}%), pago en PEDIDO ({coh['criterio_4_relaciones_plausibles']['pct_menciona_pago_en_ESTADO_PEDIDO']}%) y duda en TECNICA ({coh['criterio_4_relaciones_plausibles']['pct_menciona_duda_en_CONSULTA_TECNICA']}%).", "CUMPLE"],
+            ["5. Señal ni nula ni perfecta", "Desempeño realista entre azar (~0.25) y perfección (1.00).", f"Dummy F1 = {f1_dummy:.4f}, APF3 Corregido = {f1_corr:.4f} y PROY = {test_f1_gan:.4f} ({len(metrics['casos_error_test_set'])} errores reales en Test).", "CUMPLE"],
+            ["6. Trazabilidad con APF2", "Un solo schema en CSV, diccionario, código y API.", "13 columnas idénticas en todo el flujo (id_conversacion UUID v4 + origen + 11 campos).", "CUMPLE"],
+            ["7. Separación real vs. simulado", "100% de plantillas etiquetadas 'simulado'; 30 de bitácora 'real'.", f"490 simulados (Train/Test) + 30 reales reservados fuera de Train ({val30['aciertos']}/30 aciertos).", "CUMPLE"],
         ],
         [2100, 2600, 3400, 1100],
     )
@@ -517,7 +547,8 @@ def build_proy_docx():
     add_p(
         "La siguiente tabla presenta la comparación obligatoria exigida en el Paso 2b. Los modelos (0) Línea Base, (2) APF3 Corregido "
         "y (3) Modelo PROY Mejorado fueron entrenados y evaluados exactamente con la misma partición (392 Train / 98 Test) y semilla "
-        "fija (random_state = 42), usando el conjunto de prueba una sola vez al final:"
+        "fija (random_state = 42), seleccionando al modelo ganador exclusivamente por Validación Cruzada 5-Fold en X_train y usando "
+        "el conjunto de prueba una sola vez al final:"
     )
 
     rows_comp = [
@@ -525,6 +556,7 @@ def build_proy_docx():
             c["etapa_modelo"],
             c["particion_datos"],
             c["variables_predictoras"],
+            f"{c['cv_f1_macro']:.4f}",
             f"{c['test_accuracy']:.4f}",
             f"{c['test_precision_macro']:.4f}",
             f"{c['test_recall_macro']:.4f}",
@@ -534,16 +566,103 @@ def build_proy_docx():
         for c in metrics["comparacion_obligatoria_apf3_a_proy"]
     ]
     add_table(
-        ["Etapa / Modelo Comparado", "Partición (SEED=42)", "Configuración y Variables", "Test Acc.", "Test Prec.", "Test Recall", "Test F1", "Delta F1"],
+        ["Etapa / Modelo Comparado", "Partición (SEED=42)", "Configuración y Variables", "CV F1", "Test Acc.", "Test Prec.", "TestRec.", "Test F1", "Delta F1"],
         rows_comp,
-        [2050, 1450, 2150, 700, 700, 750, 700, 700],
+        [1850, 1350, 1950, 680, 680, 680, 680, 680, 650],
     )
 
     add_p(
-        "El ciclo de mejora del Paso 2b eleva el F1-Score Macro en el conjunto de prueba de 0.9111 (Modelo Base APF3 Corregido) a "
-        "0.9404 (Modelo PROY Mejorado con SVM Lineal), logrando una ganancia neta de +0.0293 (+2.93 puntos porcentuales) bajo la "
-        "misma partición y superando también la métrica referencial de APF3 (0.9393). En términos de negocio, esta mejora reduce "
-        "los errores en consultas con doble intención en un 33 % y mantiene en 1.0000 la Precisión de la clase SPAM.",
+        "Para garantizar trazabilidad del 100 % respecto del código ejecutado (corrigiendo el Hallazgo 3.2 de APF3), la siguiente "
+        "tabla transcribe directamente desde models/metricas_evaluacion.json los resultados completos de los 4 algoritmos supervisados "
+        "de la Unidad 3 y la Línea Base evaluados en el Paso 2b (incluyendo espacio de búsqueda param_grid, mejor configuración, "
+        "media y desviación estándar de 5-Fold CV en Train, F1 en Train, métricas en Test y ROC-AUC multiclase OVR):"
+    )
+
+    rows_all_models = []
+    for m_name, m_d in metrics["modelos_comparados"].items():
+        es_gan = " [GANADOR CV]" if m_name == ganador else ""
+        grid_str = ", ".join(f"{k.replace('clf__', '')}={v}" for k, v in m_d["espacio_busqueda_param_grid"].items())
+        best_str = ", ".join(f"{k.replace('clf__', '')}={v}" for k, v in m_d["mejores_hiperparametros"].items())
+        rows_all_models.append([
+            f"{m_name}{es_gan}",
+            grid_str,
+            best_str,
+            f"{m_d['cv_f1_macro_mean']:.4f} ± {m_d['cv_f1_macro_std']:.4f}",
+            f"{m_d['train_f1_macro']:.4f}",
+            f"{m_d['test_accuracy']:.4f}",
+            f"{m_d['test_precision_macro']:.4f}",
+            f"{m_d['test_recall_macro']:.4f}",
+            f"{m_d['test_f1_macro']:.4f}",
+            f"{m_d['test_roc_auc_ovr']:.4f}",
+        ])
+    add_table(
+        ["Algoritmo Evaluado", "Grilla (param_grid)", "Mejor Config.", "CV F1 ± Desv.", "Train F1", "Test Acc", "Test Prec", "Test Rec", "Test F1", "ROC-AUC"],
+        rows_all_models,
+        [1550, 1650, 1300, 1050, 620, 620, 620, 600, 600, 590],
+    )
+
+    add_p(
+        f"Detalle de métricas por clase y soportes exactos en el Conjunto de Prueba (n = {metrics['registros_prueba']}) para el "
+        f"modelo ganador elegido por CV ({ganador}):"
+    )
+    rep_cls = gan_info["reporte_por_clase"]
+    rows_per_class = []
+    for cls_name in metrics["clases"]:
+        c_info = rep_cls[cls_name]
+        rows_per_class.append([
+            cls_name,
+            f"{c_info['precision']:.4f}",
+            f"{c_info['recall']:.4f}",
+            f"{c_info['f1-score']:.4f}",
+            str(int(c_info["support"])),
+        ])
+    rows_per_class.append([
+        "Promedio Macro (macro avg)",
+        f"{rep_cls['macro avg']['precision']:.4f}",
+        f"{rep_cls['macro avg']['recall']:.4f}",
+        f"{rep_cls['macro avg']['f1-score']:.4f}",
+        str(int(rep_cls["macro avg"]["support"])),
+    ])
+    rows_per_class.append([
+        "Promedio Ponderado (weighted avg)",
+        f"{rep_cls['weighted avg']['precision']:.4f}",
+        f"{rep_cls['weighted avg']['recall']:.4f}",
+        f"{rep_cls['weighted avg']['f1-score']:.4f}",
+        str(int(rep_cls["weighted avg"]["support"])),
+    ])
+    add_table(
+        ["Clase de Intención / Resumen", "Precisión (Test)", "Recall (Test)", "F1-Score (Test)", "Soporte Exacto (n = 98)"],
+        rows_per_class,
+        [2800, 1600, 1600, 1600, 1600],
+    )
+
+    add_p(
+        f"Auditoría de los {len(metrics['casos_error_test_set'])} casos de error del modelo ganador en el Conjunto de Prueba "
+        f"(extraídos directamente de casos_error_test_set en metricas_evaluacion.json):"
+    )
+    rows_err_test = [
+        [
+            e["id_conversacion"][:8],
+            e["origen"],
+            e["texto_cliente"],
+            e["clase_real"],
+            e["clase_predicha"],
+            f"{e['confianza_prediccion']:.4f}",
+            f"{e['hora_del_dia']} h",
+        ]
+        for e in metrics["casos_error_test_set"]
+    ]
+    add_table(
+        ["ID (UUID)", "Origen", "Texto Exacto de la Consulta en Test Set (n = 98)", "Clase Real", "Predicción", "Conf.", "Hora"],
+        rows_err_test,
+        [850, 750, 3900, 1250, 1250, 650, 550],
+    )
+
+    add_p(
+        f"El ciclo de mejora del Paso 2b eleva el F1-Score Macro en el conjunto de prueba de {f1_corr:.4f} (Modelo Base APF3 Corregido) a "
+        f"{test_f1_gan:.4f} (Modelo PROY Mejorado con {ganador}, elegido estrictamente por obtener el mayor CV F1 = {cv_f1_gan:.4f} ± {cv_std_gan:.4f} "
+        f"en X_train), logrando una ganancia neta de +{delta_f1:.4f} (+{delta_f1*100:.2f} puntos porcentuales) bajo la "
+        f"misma partición y alcanzando 1.0000 tanto en Precisión como en Recall sobre la clase SPAM (21/21 aciertos, 0 clientes reales bloqueados).",
         "Interpretación del Delta y Decisión Final: ",
     )
 
@@ -636,19 +755,19 @@ def build_proy_docx():
             [
                 "Servicio de Inferencia ML",
                 "Módulo monolítico conceptual dentro del mismo servidor web.",
-                "Microservicio independiente FastAPI (Python 3.11) que sirve modelo_intenciones_hurios.joblib (86 KB).",
+                f"Microservicio independiente FastAPI (Python 3.11) que sirve modelo_intenciones_hurios.joblib ({peso_kb} KB).",
                 "Aísla la carga de CPU/RAM (< 45 MB) del backend Java Spring Boot y permite actualizar el modelo .joblib en 15 s.",
             ],
             [
                 "Flujo Conversacional",
                 "Clasificación de texto libre únicamente.",
-                "Arquitectura híbrida: Máquina de Estados Guiada (Opciones 1 a 4) + Clasificador SVM + Enriquecimiento SQL.",
+                f"Arquitectura híbrida: Máquina de Estados Guiada (Opciones 1 a 4) + Clasificador {ganador} + Enriquecimiento SQL.",
                 "Garantiza certeza en mensajes de un solo dígito ('1', '2') y clasifica con IA las consultas abiertas o nocturnas.",
             ],
             [
                 "Trazabilidad y Respaldo",
                 "Sin protocolo formal ante caída del motor de IA.",
-                "Registro persistente con versión (v2.0.0-PROY-20261124), hash SHA-256 y Degradación Controlada (Fallback).",
+                f"Registro persistente con versión ({ver_mod}), hash SHA-256 ({hash_mod}) y Degradación Controlada (Fallback).",
                 "Cumple la Ley N.° 31814 y garantiza que ninguna consulta se pierda si el servicio ML entra en reposo o recibe datos atípicos.",
             ],
         ],
@@ -675,12 +794,12 @@ def build_proy_docx():
                 "Automatización del triaje de WhatsApp reduciendo la espera de 15 min a 1.31 segundos.",
             ],
             [
-                "v2.0.0 (PROY - Sem. 17)",
-                "1) Separación de 30 casos reales de validación externa (29/30 aciertos) y 100 reales en Train.\n"
-                "2) Ciclo de mejora Paso 2b (+3 variables de cierre comercial, TF-IDF 850 bigramas, F1 = 0.9404).\n"
-                "3) Cálculo automático de Venta Potencial en Soles y explicación en lenguaje de negocio.\n"
-                "4) Validación de entradas inválidas (HTTP 422), modo de Degradación Controlada (Fallback) y log versionado.",
-                "Cierre completo del flujo comercial con trazabilidad auditada y tolerancia a fallos en vivo.",
+                "v2.1.0 (PROY - Sem. 17)",
+                f"1) Eliminación de regla idx % 4 == 0: 490 filas simuladas en Train/Test y 30 reales de bitácora reservadas fuera ({val30['aciertos']}/30 aciertos = {val30['accuracy_30_reales']*100:.2f}%).\n"
+                f"2) Selección del ganador por 5-Fold CV en Train ({ganador}, CV F1 = {cv_f1_gan:.4f} ± {cv_std_gan:.4f}, Test F1 = {test_f1_gan:.4f}).\n"
+                "3) Limpieza total del CSV (0 celdas vacías, 0 teléfonos de 9 dígitos) y script train_pipeline.py 100 % autocontenido.\n"
+                "4) Cálculo de Venta Potencial en Soles, validación HTTP 422, Degradación Controlada (Fallback) y log versionado.",
+                "Trazabilidad 100 % verificada entre código, JSON, informe y producción.",
             ],
         ],
         [1850, 4450, 2900],
@@ -692,7 +811,7 @@ def build_proy_docx():
         [
             [
                 "1. Clasificador ML Supervisado y Microservicio FastAPI (/predict, /predictions-log)",
-                "100 % Integrado y operativo en Render (v2.0.0-PROY-20261124, Hash 135c43a3eb29, F1 = 0.9404).",
+                f"100 % Integrado y operativo en Render ({ver_mod}, {peso_kb} KB, Hash {hash_mod}, Test F1 = {test_f1_gan:.4f}).",
                 "Automatizar el disparo mensual de train_pipeline.py mediante cron job en la nube.",
                 "En el plan gratuito de Render el primer arranque tras inactividad toma ~25 s (mitigado con fallback local).",
             ],
@@ -720,25 +839,29 @@ def build_proy_docx():
 
     add_heading("Modelo Servido Versionado, Esquema JSON, Validaciones y Degradación Controlada", 2, "_TocPROY_03_3")
     add_p(
-        "El artefacto final exportado (models/modelo_intenciones_hurios.joblib, versión v2.0.0-PROY-20261124, hash SHA-256: "
-        "135c43a3eb29) encapsula en un único objeto Pipeline de scikit-learn tanto el preprocesador ColumnTransformer como el "
-        "clasificador SVM Lineal optimizado. Cada llamada al endpoint POST /predict aplica un umbral configurable (por defecto 0.68) "
-        "y persiste la auditoría completa en registro_predicciones_proy.json (consultable vía GET /predictions-log y en la bandeja):"
+        f"El artefacto final exportado (models/modelo_intenciones_hurios.joblib, peso exacto en disco: {peso_kb} KB, versión {ver_mod}, "
+        f"hash SHA-256: {hash_mod}) encapsula en un único objeto Pipeline de scikit-learn tanto el preprocesador ColumnTransformer "
+        f"como el clasificador {ganador} optimizado. El contrato JSON expuesto por el endpoint POST /predict de app.py "
+        f"(ConsultaClienteRequest -> PrediccionIntencionResponse) aplica un umbral configurable (por defecto 0.68) y persiste "
+        f"la auditoría completa en registro_predicciones_proy.json (consultable vía GET /predictions-log y en la bandeja):"
     )
 
     add_table(
-        ["Campo del Esquema JSON (/predict)", "Tipo", "Ejemplo Real en Producción", "Propósito en el Flujo de Negocio del MVP"],
+        ["Campo Exacto en app.py (/predict)", "Tipo", "Ejemplo Real en Producción", "Propósito en el Flujo de Negocio del MVP"],
         [
-            ["texto_cliente (Entrada)", "string", "\"Buenas noches, tienes cilindro para Torito 4T y cuánto sale?\"", "Consulta capturada desde WhatsApp (+51 937 395 986) o Web."],
-            ["hora_del_dia / umbral_decision", "int / float", "21 / 0.68", "Permite evaluar condición nocturna y ajustar sensibilidad."],
-            ["intencion_predicha (Salida)", "string", "\"COTIZACION\"", "Define la ruta operativa (Cotización, Pedido, Técnica o Spam)."],
-            ["confianza_modelo / probabilidades", "float / dict", "0.9642 / {\"COTIZACION\": 0.9642, ...}", "Probabilidad calibrada que determina si responde solo o escala."],
-            ["monto_potencial_soles (Salida)", "float", "185.00", "Valor comercial en Soles de los repuestos detectados en stock."],
-            ["explicacion_negocio (Salida)", "string", "\"QUÉ PREDICE: Intención de compra directa (96.4%)...\"", "Traducción clara en la interfaz para el vendedor de mostrador."],
-            ["version_modelo / hash_modelo", "string", "\"v2.0.0-PROY-20261124\" / \"135c43a3eb29\"", "Garantiza reproducibilidad y auditoría de cada inferencia."],
-            ["modo_operacion (Salida)", "string", "\"INFERENCIA_ML_NORMAL\" | \"DEGRADACION_CONTROLADA_FALLBACK\"", "Indica si operó el modelo SVM o la regla manual de respaldo."],
+            ["texto_cliente (Request)", "string", "\"Buenas noches, tienes cilindro para Torito 4T y cuánto sale?\"", "Consulta capturada desde WhatsApp (+51 937 395 986) o Web."],
+            ["hora_del_dia / umbral_decision (Request)", "int / float", "21 / 0.68", "Evalúa condición nocturna (es_fuera_horario) y umbral humano."],
+            ["simular_fallo_servicio / canal (Request)", "bool / string", "false / \"WEB_MVP\"", "Permite probar en vivo el protocolo Fallback e identificar el canal."],
+            ["id_conversacion / texto_normalizado (Response)", "UUID / string", "\"46685257-...\" / \"cilindro bajaj torito re 4t...\"", "Identificador anónimo (Ley N.° 29733) y texto procesado con jerga local."],
+            ["intencion_predicha (Response)", "string", "\"COTIZACION\"", "Define la ruta operativa (COTIZACION, ESTADO_PEDIDO, CONSULTA_TECNICA, SPAM)."],
+            ["confianza_modelo / probabilidades (Response)", "float / dict", "0.9803 / {\"COTIZACION\": 0.9803, ...}", "Probabilidad calibrada que determina respuesta automática o derivación."],
+            ["monto_potencial_soles (Response)", "float", "185.00", "Valor comercial en Soles de los repuestos detectados en stock SQL."],
+            ["productos_sugeridos_supabase (Response)", "list[object]", "[{\"id\": 4574, \"nombre\": \"Cilindro...\", \"precio_soles\": 185.0}]", "Repuestos reales vinculados desde el catálogo de PostgreSQL."],
+            ["explicacion_negocio / accion_negocio_sugerida", "string", "\"QUÉ PREDICE: Intención comercial de compra directa...\"", "Traducción clara en la interfaz para el vendedor de mostrador."],
+            ["version_modelo / hash_modelo (Response)", "string", f"\"{ver_mod}\" / \"{hash_mod}\"", "Garantiza reproducibilidad y auditoría de cada inferencia."],
+            ["modo_operacion (Response)", "string", "\"INFERENCIA_ML_NORMAL\" | \"DEGRADACION_CONTROLADA_FALLBACK\"", "Indica si operó el modelo ML o la regla manual de respaldo."],
         ],
-        [2200, 1000, 2900, 3100],
+        [2350, 950, 2850, 3050],
     )
 
     add_p("Casos de validación y degradación controlada verificados para la Demo Funcional en Vivo (Paso 3 y Sección 4):")
@@ -808,9 +931,9 @@ def build_proy_docx():
             ],
             [
                 "3. Exactitud de clasificación sobre consultas reales de la tienda",
-                "Sin triaje automático (0 % automatizado; azar Dummy = 25.5 %)",
-                "96.67 % en lote real externo (29/30) y 93.88 % en Test (F1 = 0.9404)",
-                "+69.15 pts en F1 sobre línea base",
+                "Sin triaje automático (0 % automatizado; azar Dummy = 15.3 %)",
+                f"{val30['accuracy_30_reales']*100:.2f} % en lote real externo ({val30['aciertos']}/30) y {test_acc_gan*100:.2f} % en Test (F1 = {test_f1_gan:.4f})",
+                f"+{(test_f1_gan - f1_dummy)*100:.2f} pts en F1 sobre línea base",
                 "DATO REAL MEDIDO sobre las 30 consultas reales reservadas (Condición 5) y Test Set (n = 98).",
             ],
             [
@@ -888,7 +1011,7 @@ def build_proy_docx():
         [
             [
                 "1. Viabilidad Técnica",
-                "• Artefacto ML: 86 KB en disco y < 45 MB de RAM en ejecución (9 % del límite de 512 MB de Render Free Tier).\n"
+                f"• Artefacto ML: {peso_kb} KB en disco y < 45 MB de RAM en ejecución (9 % del límite de 512 MB de Render Free Tier).\n"
                 "• Latencia observada: 3.2 ms de inferencia en CPU local; 1.31 s extremo a extremo incluyendo consulta SQL a Supabase.\n"
                 "• Capacidad: soporta > 120 consultas/minuto sin GPU y cuenta con fallback determinista ante cold-start.",
                 "VIABLE: Opera sin hardware especializado ni pago por tokens de LLM externo.",
@@ -1054,32 +1177,33 @@ def build_proy_docx():
     add_heading("Conclusiones, Límites y Trabajo Futuro", 1, "_TocPROY_06")
     add_bullet(
         "1. Cierre coherente del ciclo de transformación digital (APF1 → PROY): ",
-        "Se demostró empíricamente que la pérdida del 35 % al 40 % de las ventas nocturnas diagnosticada en Hurios Rally E.I.R.L. "
-        "se resuelve integrando un clasificador supervisado de intenciones comerciales en tiempo real (SVM Lineal) dentro del flujo "
-        "transaccional del MVP y del WhatsApp +51 937 395 986. El sistema reduce el tiempo de primera respuesta de 15 minutos (y "
-        "hasta 8 horas de noche) a 1.31 segundos, permitiendo recuperar entre S/ 2,250 y S/ 2,850 mensuales y ahorrar 48 horas/mes "
-        "en mostrador con un costo operativo de S/ 0.00 en marcha blanca (o S/ 65.00/mes en servidor dedicado).",
+        f"Se demostró empíricamente que la pérdida del 35 % al 40 % de las ventas nocturnas diagnosticada en Hurios Rally E.I.R.L. "
+        f"se resuelve integrando un clasificador supervisado de intenciones comerciales en tiempo real ({ganador}) dentro del flujo "
+        f"transaccional del MVP y del WhatsApp +51 937 395 986. El sistema reduce el tiempo de primera respuesta de 15 minutos (y "
+        f"hasta 8 horas de noche) a 1.31 segundos, permitiendo recuperar entre S/ 2,250 y S/ 2,850 mensuales y ahorrar 48 horas/mes "
+        f"en mostrador con un costo operativo de S/ 0.00 en marcha blanca (o S/ 65.00/mes en servidor dedicado).",
     )
     add_bullet(
-        "2. Superioridad metodológica del Ciclo de Mejora (Paso 2a y 2b): ",
-        "Tras separar rigurosamente 30 registros reales para validación externa (Condición 5) y conservar 100 registros reales en "
-        "el entrenamiento (Bonificación +1 pto), la incorporación de las 3 nuevas variables de cierre comercial y detección de spam "
-        "camuflado, la expansión a 850 bigramas TF-IDF y la optimización del umbral de decisión por costo (0.68 / 0.80) elevaron el "
-        "F1-Score Macro en prueba de 0.9111 (APF3 Corregido) a 0.9404 (Modelo PROY, +2.93 puntos porcentuales), manteniendo "
-        "Precisión = 1.0000 en SPAM y logrando 96.67 % de acierto (29/30) sobre casos reales nunca vistos.",
+        "2. Superioridad metodológica del Ciclo de Mejora y Corrección Total de APF3 (Paso 2a y 2b): ",
+        f"Tras eliminar la regla sintética idx % 4 == 0, rotular con total honestidad las 490 filas de plantillas como 'simulado', "
+        f"reservar los 30 registros orgánicos de bitácora ('real') fuera del entrenamiento (Condición 5) y seleccionar al modelo "
+        f"ganador estrictamente por Validación Cruzada 5-Fold en X_train (CV F1 = {cv_f1_gan:.4f} ± {cv_std_gan:.4f}), el modelo PROY "
+        f"elevó el F1-Score Macro en prueba de {f1_corr:.4f} (APF3 Corregido) a {test_f1_gan:.4f} (+{delta_f1*100:.2f} puntos porcentuales), "
+        f"manteniendo Precisión y Recall = 1.0000 en SPAM y logrando {val30['accuracy_30_reales']*100:.2f} % de acierto ({val30['aciertos']}/30, "
+        f"F1 = {val30['f1_macro_30_reales']:.4f}) sobre casos reales nunca vistos.",
     )
     add_bullet(
         "3. Valor complementario de la segmentación no supervisada (Semana 16): ",
-        "La extensión de clustering K-Means (k = 4, Silhouette = 0.3003, Davies-Bouldin = 1.3078) permitió identificar cuatro "
-        "perfiles operativos claros, confirmando que el segmento de compra urgente nocturna presenta un ticket promedio superior y "
-        "justifica la automatización 24/7 con pago inmediato vía Yape/Plin.",
+        f"La extensión de clustering K-Means (k = 4, Silhouette = {clust['silhouette_ganador']}, Davies-Bouldin = {clust['davies_bouldin_ganador']}) "
+        f"permitió identificar cuatro perfiles operativos claros sobre los 520 registros, justificando la automatización nocturna 24/7 "
+        f"con pago inmediato vía Yape/Plin.",
     )
     add_bullet(
         "4. Límites honestos del modelo y de los datos: ",
-        "(a) El dataset de entrenamiento (n = 490) es híbrido (20.4 % real y 79.6 % simulado calibrado) y su vocabulario está "
-        "especializado en repuestos de mototaxis Bajaj/TVS y motos lineales; no generaliza a automóviles sedán o camiones pesados "
-        "sin reentrenamiento. (b) En consultas multi-intención altamente ambiguas (~6 % de los casos), la probabilidad máxima cae "
-        "al rango de 0.54–0.65, límite que el sistema controla de forma segura derivando la conversación al asesor humano.",
+        "(a) El dataset de entrenamiento/prueba (n = 490) está compuesto al 100 % por registros simulados calibrados sobre el catálogo "
+        "real de Hurios Rally, mientras que los 30 registros reales se reservaron íntegramente para la evaluación externa (Condición 5); "
+        "su vocabulario está especializado en repuestos de mototaxis Bajaj/TVS y motos lineales. (b) En consultas multi-intención "
+        "altamente ambiguas (~5 % de los casos), el sistema protege la operación derivando la conversación al asesor humano (< 0.68).",
     )
     add_bullet(
         "5. Trabajo futuro para los próximos 12 meses: ",
@@ -1122,18 +1246,18 @@ def build_proy_docx():
         ["Campo / Variable", "Tipo de Dato", "Rol en el Pipeline ML", "Descripción y Regla de Dominio Verificada"],
         [
             ["id_conversacion", "UUID v4 (string)", "Identificador anónimo", "Clave única disociada irreversiblemente según Ley N.° 29733."],
-            ["origen", "Categórico (string)", "Auditoría Condición 5", "'real' (130 filas: 30 validación externa + 100 Train) | 'simulado' (390 filas)."],
-            ["timestamp_primer_mensaje", "Datetime ISO", "Auditoría temporal", "Fecha y hora exacta de recepción de la consulta (Ago–Oct 2026)."],
+            ["origen", "Categórico (string)", "Auditoría Condición 5", "'real' (30 filas orgánicas de bitácora reservadas fuera de Train) | 'simulado' (490 filas de plantillas para Train/Test)."],
+            ["timestamp_primer_mensaje", "Datetime ISO", "Auditoría temporal", "Fecha y hora exacta de recepción de la consulta (Ago–Nov 2026)."],
             ["timestamp_respuesta_bot", "Datetime ISO", "Excluida de X (No leakage)", "Marca temporal de respuesta; verifica ts_respuesta >= ts_mensaje."],
-            ["texto_cliente", "Texto (string)", "Predictora NLP base", "Mensaje original del cliente con jerga automotriz de Lima Norte."],
-            ["intencion_predicha", "Categórico (4 clases)", "Variable Objetivo (Y)", "COTIZACION, CONSULTA_TECNICA, ESTADO_PEDIDO o SPAM."],
+            ["texto_cliente", "Texto (string)", "Predictora NLP base", "Mensaje original del cliente sin teléfonos de 9 dígitos (0 ocurrencias PII)."],
+            ["intencion_predicha", "Categórico (4 clases)", "Variable Objetivo (Y)", "COTIZACION (145), CONSULTA_TECNICA (133), ESTADO_PEDIDO (133) o SPAM (109)."],
             ["confianza_modelo", "Numérico [0..1]", "Excluida de X (Post-evento)", "Probabilidad máxima registrada por el clasificador."],
-            ["producto_cotizado", "Texto (string)", "Contexto de catálogo", "Nombre oficial del repuesto entre las 48 referencias de PostgreSQL."],
-            ["monto_total", "Numérico (S/)", "Cálculo de impacto y K-Means", "Valor en Soles de la cotización o pedido (rango S/ 18.00 a S/ 980.00)."],
-            ["metodo_pago", "Categórico (string)", "Contexto transaccional", "YAPE, PLIN, TARJETA, EFECTIVO, TRANSFERENCIA o NINGUNO."],
-            ["estado_pedido", "Categórico (string)", "Excluida de X (Post-venta)", "COTIZADO, PAGADO, EN_DESPACHO, ENTREGADO o SIN_PEDIDO."],
+            ["producto_cotizado", "Texto (string)", "Contexto de catálogo", "Nombre oficial del repuesto o 'SIN_PRODUCTO' en SPAM (0 celdas vacías)."],
+            ["monto_total", "Numérico (S/)", "Cálculo de impacto y K-Means", "Valor en Soles de la cotización (rango S/ 0.00 a S/ 960.00; S/ 18–960 en positivas)."],
+            ["metodo_pago", "Categórico (string)", "Contexto transaccional", "YAPE, PLIN, TARJETA, EFECTIVO, TRANSFERENCIA o NINGUNO (0 celdas vacías)."],
+            ["estado_pedido", "Categórico (string)", "Excluida de X (Post-venta)", "COTIZADO, PAGADO, EN_DESPACHO, ENTREGADO o SIN_PEDIDO (0 celdas vacías)."],
             ["hora_del_dia", "Entero [0..23]", "Predictora numérica (X)", "Hora de recepción; permite capturar el comportamiento nocturno."],
-            ["es_fuera_horario", "Booleano (0/1)", "Predictora numérica (X)", "1 si hora >= 18 o hora < 8 (43.27 % del total); 0 en horario diurno."],
+            ["es_fuera_horario", "Booleano (0/1)", "Predictora numérica (X)", f"1 si hora >= 18 o hora < 8 ({eda['porcentaje_fuera_horario']} % del total); 0 en horario diurno."],
             ["contiene_jerga_mecanica (Derivada)", "Binario (0/1)", "Predictora derivada APF3", "Activa si menciona piezas o modelos del catálogo Bajaj/TVS."],
             ["menciona_precio_stock (Derivada)", "Binario (0/1)", "Predictora derivada APF3", "Activa ante términos de precio, stock, costo o disponibilidad."],
             ["menciona_pago_o_pedido (Derivada)", "Binario (0/1)", "Predictora derivada APF3", "Activa ante términos de Yape, Plin, voucher, boleta o despacho."],

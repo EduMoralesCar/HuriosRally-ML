@@ -12,6 +12,7 @@ Estructura: 15 Diapositivas exactas para los 15 minutos de exposición de la Sec
 Diseño: Clásico, limpio, modular (tarjetas cuadradas), sin paréntesis de tiempos, sin flechas raras,
 idioma español (es-PE) configurado y gráficas grandes del Informe Final.
 """
+import json
 from pathlib import Path
 from PIL import Image, ImageChops
 from pptx import Presentation
@@ -23,6 +24,7 @@ from pptx.util import Inches, Pt
 ROOT_DIR = Path(__file__).resolve().parent.parent
 ML_DIR = Path(__file__).resolve().parent
 FIG_DIR = ML_DIR / "reports" / "figures"
+METRICS_PATH = ML_DIR / "models" / "metricas_evaluacion.json"
 DOCX_MEDIA = Path(r"C:\Users\edomo\.gemini\antigravity\brain\c64fda5b-f49f-45f0-8fef-800658a6ac4b\scratch\user_docx_extracted\word\media")
 CROPPED_DIR = Path(r"C:\Users\edomo\.gemini\antigravity\brain\c64fda5b-f49f-45f0-8fef-800658a6ac4b\scratch\cropped_media_proy")
 CROPPED_DIR.mkdir(parents=True, exist_ok=True)
@@ -314,6 +316,21 @@ def style_table(table, headers: list, rows: list, col_widths: list, font_size: f
 
 
 def build_proy_presentation():
+    metrics = json.loads(METRICS_PATH.read_text(encoding="utf-8"))
+    val30 = metrics["validacion_30_registros_reales_condicion_5"]
+    clust = metrics["clustering_semana_16_bonificacion"]
+    ganador = metrics["modelo_ganador"]
+    gan_info = metrics["modelos_comparados"][ganador]
+    ver_mod = metrics["version_modelo"]
+    hash_mod = metrics["hash_artefacto_joblib"]
+    peso_kb = metrics["peso_joblib_kb"]
+    cv_f1_gan = metrics["cv_f1_macro_ganador"]
+    cv_std_gan = gan_info["cv_f1_macro_std"]
+    test_f1_gan = metrics["f1_macro_ganador"]
+    test_acc_gan = gan_info["test_accuracy"]
+    f1_corr = metrics["f1_macro_apf3_corregido"]
+    delta_f1 = metrics["delta_mejora_proy_vs_corregido"]
+
     prs = Presentation()
     prs.slide_width = Inches(13.333)
     prs.slide_height = Inches(7.5)
@@ -428,7 +445,7 @@ def build_proy_presentation():
     add_feature_card(
         s2, 8.85, 1.16, 3.93, 1.55,
         "3. Sistema Integrado en PROY",
-        "Clasificador SVM mejorado (F1 = 0.9404) operando en vivo sobre WhatsApp (+51 937 395 986) y bandeja BI con cálculo de venta potencial.",
+        f"Clasificador {ganador} elegido por CV (CV F1 = {cv_f1_gan:.4f} | Test F1 = {test_f1_gan:.4f}) operando en vivo sobre WhatsApp (+51 937 395 986).",
         C_MINT_DARK
     )
 
@@ -503,8 +520,8 @@ def build_proy_presentation():
     )
     add_feature_card(
         s3, 7.10, 4.13, 5.68, 1.35,
-        "3. Cambio en Inferencia: Microservicio Independiente (86 KB)",
-        "El modelo SVM corre en un servicio FastAPI desacoplado (< 45 MB RAM) que consulta stock en vivo y actualiza el archivo .joblib en 15 segundos.",
+        f"3. Cambio en Inferencia: Microservicio Independiente ({peso_kb} KB)",
+        f"El modelo {ganador} corre en FastAPI desacoplado (< 45 MB RAM) que consulta stock en vivo y actualiza el archivo .joblib en 15 segundos.",
         C_BLUE_DARK
     )
     add_feature_card(
@@ -528,15 +545,19 @@ def build_proy_presentation():
     headers_ch = ["Versión / Entrega", "Mejoras, Correcciones y Validaciones Implementadas", "Impacto Operativo Verificado"]
     rows_ch = [
         ["v1.0.0 (APF2 · Sem. 10)", "Tienda web React, backend Spring Boot con JWT, catálogo de 48 repuestos en Supabase PostgreSQL, carrito y boleta electrónica PDF.", "Apertura del canal e-commerce 24/7 en Comas."],
-        ["v1.5.0 (APF3 · Sem. 15)", "Clasificador SVM Lineal, microservicio FastAPI (/predict), Bot WhatsApp (+51 937 395 986) con menú guiado y Dashboard BI estilo Power BI.", "Reducción de espera de 15 min a 1.31 segundos."],
-        ["v2.0.0 (PROY · Sem. 17)", "Separación de 30 reales externos (29/30 aciertos), +3 variables de cierre comercial (F1 = 0.9404), cálculo de Venta Potencial en Soles, validación HTTP 422, Degradación Controlada y log versionado.", "Trazabilidad completa, tolerancia a fallos y cierre del flujo de venta."],
+        ["v1.5.0 (APF3 · Sem. 15)", "Clasificador supervisado multiclase, microservicio FastAPI (/predict), Bot WhatsApp (+51 937 395 986) con menú guiado y Dashboard BI estilo Power BI.", "Reducción de espera de 15 min a 1.31 segundos."],
+        [
+            "v2.1.0 (PROY · Sem. 17)",
+            f"Eliminación de regla idx%4==0 (490 simulados + 30 reales reservados: {val30['aciertos']}/30 aciertos = {val30['accuracy_30_reales']*100:.2f}%), selección por 5-Fold CV ({ganador}, Test F1 = {test_f1_gan:.4f}), 0 vacíos/teléfonos, validación HTTP 422 y Degradación Controlada.",
+            "Trazabilidad 100% entre código, JSON, informe y producción.",
+        ],
     ]
     tbl_ch = s4.shapes.add_table(len(rows_ch) + 1, 3, Inches(0.55), Inches(1.18), Inches(12.23), Inches(2.55))
     style_table(tbl_ch.table, headers_ch, rows_ch, [2.15, 6.78, 3.30], font_size=10.0)
 
     headers_st = ["Componente del Sistema", "Estado Hoy en Semana 17 (Nivel A)", "Pendiente para Escalado Futuro", "Limitación Asumida"]
     rows_st = [
-        ["Microservicio ML FastAPI y Modelo v2.0.0-PROY-20261124", "100% Integrado en vivo en Render (Hash 135c43a3eb29).", "Disparo mensual automático por cron job.", "Primer arranque en plan gratuito toma ~25 s (cubierto por fallback)."],
+        [f"Microservicio ML FastAPI y Modelo {ver_mod}", f"100% Integrado en vivo en Render ({peso_kb} KB, Hash {hash_mod}).", "Disparo mensual automático por cron job.", "Primer arranque en plan gratuito toma ~25 s (cubierto por fallback)."],
         ["Bot WhatsApp (+51 937 395 986) y Bandeja Analítica BI", "100% Integrado 24/7 con stock SQL y simulador en vivo.", "Lectura OCR automática de vouchers Yape/Plin.", "Requiere conexión a internet del teléfono principal cada 14 días."],
         ["Tienda Web, Inventario en Tiempo Real y Boletas SUNAT", "100% Integrado con alertas Admin-Cliente y reseñas.", "Envío XML directo vía OSE certificado.", "Validación del código de operación Yape asistida antes del despacho."],
         ["Validaciones y Protocolo de Degradación Controlada", "100% Integrado y probado (Escenarios A, B1 y B2).", "Alerta SMS adicional al administrador.", "Vocabulario especializado en repuestos Bajaj, TVS y motos lineales."],
@@ -555,30 +576,30 @@ def build_proy_presentation():
     s5 = prs.slides.add_slide(blank)
     add_header(s5, 5, "Bloque 3 · Corrección y Mejora del Modelo ML", "4. Paso 2a: Tabla de Corrección de APF3 y Auditoría del Dataset")
 
-    add_metric(s5, 0.55, 1.15, 2.90, 1.12, "Dataset Total Auditado", "520 × 13", "Cumple 7/7 criterios (0 errores)", C_BLUE)
-    add_metric(s5, 3.66, 1.15, 2.90, 1.12, "Lote Real Externo", "30 Reales", "Reservados fuera de Train", C_MINT_DARK)
-    add_metric(s5, 6.77, 1.15, 2.90, 1.12, "Reales en Entrenamiento", "100 Reales", "Bonificación +1 pto cumplida", C_BLUE_DARK)
+    add_metric(s5, 0.55, 1.15, 2.90, 1.12, "Dataset Total Auditado", "520 × 13", "0 vacíos, 0 NaNs y 0 teléfonos 9d", C_BLUE)
+    add_metric(s5, 3.66, 1.15, 2.90, 1.12, "Lote Real de Bitácora", "30 Reales", "100% reservados fuera de Train", C_MINT_DARK)
+    add_metric(s5, 6.77, 1.15, 2.90, 1.12, "Datos Simulados", "490 Filas", "0% sintéticos rotulados como real", C_BLUE_DARK)
     add_metric(s5, 9.88, 1.15, 2.90, 1.12, "Partición de Modelado", "392 / 98", "80% Train y 20% Test (SEED=42)", C_NAVY)
 
-    headers_c2a = ["ID", "Observación de Retroalimentación / Control Paso 2a", "Corrección Aplicada en Código y Flujo", "Evidencia Verificable"]
+    headers_c2a = ["ID", "Hallazgo Docente APF3 / Control Paso 2a", "Corrección Aplicada en Código y Dataset", "Evidencia Verificable"]
     rows_c2a = [
         [
             "OBS-01",
-            "Clarificar cuál es la propuesta ML: explicar QUÉ predice el modelo y POR QUÉ predecir eso resuelve el problema de ventas de la MiPYME.",
-            "Se explicitó la relación causal con el cierre de ventas nocturnas y se añadieron la variable 'indicador_cierre_venta' y el cálculo de 'monto_potencial_soles' en cada predicción.",
-            "Campo monto_potencial_soles y explicacion_negocio en POST /predict y Bandeja BI."
+            "Hallazgo 3.1 (Origen de datos): En APF3 generate_dataset.py etiquetó filas sintéticas como 'real' con idx % 4 == 0.",
+            "Se eliminó por completo idx % 4 == 0. Las 490 filas de plantillas llevan origen='simulado'. Solo las 30 consultas orgánicas reales del Bot (+51 937 395 986) llevan origen='real' y se reservan fuera de Train (Condición 5).",
+            f"generate_dataset.py y Figura 6 ({val30['aciertos']}/30 aciertos = {val30['accuracy_30_reales']*100:.2f}%)."
         ],
         [
             "OBS-02",
-            "Condición 5: Separar al menos 30 registros reales fuera del entrenamiento para comprobar caso por caso si el modelo generaliza a la realidad.",
-            "De las 130 filas con origen='real', se reservaron 30 reales estratificados para validación externa (nunca entran a Train) y se dejaron 100 reales + 390 simulados (n=490) para modelado.",
-            "Función separar_lote_validacion_30_reales() y Figura 6 (29/30 aciertos = 96.67%)."
+            "Hallazgo 3.2 (Selección y tablas): Ganador elegido por Test F1 y discrepancias con metricas_evaluacion.json.",
+            f"El ganador ({ganador}) se elige estrictamente por 5-Fold CV en X_train (CV F1 = {cv_f1_gan:.4f} ± {cv_std_gan:.4f}). Se calculan ±desv. y ROC-AUC en código y las tablas se generan directo desde metricas_evaluacion.json.",
+            f"train_pipeline.py y Test F1 = {test_f1_gan:.4f} (+{delta_f1*100:.2f} pts vs base)."
         ],
         [
             "OBS-03",
-            "Condición 6 y Paso 2b: Re-verificar en código los 7 criterios de coherencia y ejecutar un ciclo de mejora metodológica sobre la misma partición.",
-            "Re-ejecución automática de los 7 criterios (0 violaciones), adición de 3 nuevas variables de negocio, expansión a 850 bigramas TF-IDF y umbral por costo en Soles (0.68 / 0.80).",
-            "Ficha 7/7 en metricas_evaluacion.json y mejora de F1 de 0.9111 a 0.9404 (+2.93 pts)."
+            "Hallazgos 3.3, 3.4 y 3.5: Celdas vacías, teléfonos de 9 dígitos, script autocontenido, contrato API y peso .joblib.",
+            f"0 celdas vacías y 0 teléfonos de 9 dígitos en el CSV; monto acotado a [0, 960]; script .py 100% autocontenido; peso exacto {peso_kb} KB y 0 credenciales en texto plano.",
+            f"Sección auditoria_csv_exacta y {ver_mod} ({peso_kb} KB)."
         ],
     ]
     tbl_c2a = s5.shapes.add_table(len(rows_c2a) + 1, 4, Inches(0.55), Inches(2.45), Inches(12.23), Inches(4.50))
@@ -596,15 +617,22 @@ def build_proy_presentation():
     s6 = prs.slides.add_slide(blank)
     add_header(s6, 6, "Bloque 3 · Ciclo de Mejora y Comparación Experimental", "5. Paso 2b: Líneas de Mejora y Comparación APF3 a PROY")
 
-    headers_comp = ["Etapa / Modelo Comparado", "Partición (SEED=42)", "Configuración y Variables", "Test Acc.", "Test Prec.", "Test Recall", "Test F1-Macro", "Delta vs Corr."]
-    rows_comp = [
-        ["0. Línea Base (DummyClassifier)", "392 Train / 98 Test", "Azar estratificado (4 clases)", "0.2551", "0.2500", "0.2508", "0.2489", "-0.6622"],
-        ["1. Modelo APF3 Entregado (Ref.)", "416 Train / 104 Test", "TF-IDF (600) + 8 variables base", "0.9423", "0.9403", "0.9396", "0.9393", "Referencia"],
-        ["2. Modelo Base APF3 Corregido", "392 Train / 98 Test", "TF-IDF (320 unigramas) + 7 variables base", "0.9082", "0.9140", "0.9088", "0.9111", "Base 0.0000"],
-        ["3. Modelo PROY Mejorado (SVM)", "392 Train / 98 Test", "TF-IDF (850 bigramas) + 11 variables + Umbral", "0.9388", "0.9421", "0.9396", "0.9404", "+0.0293 (+2.9 pts)"],
-    ]
+    headers_comp = ["Etapa / Modelo Comparado", "Partición (SEED=42)", "CV F1 (5-Fold)", "Test Acc.", "Test Prec.", "Test Recall", "Test F1-Macro", "Delta vs Corr."]
+    rows_comp = []
+    for c in metrics["comparacion_obligatoria_apf3_a_proy"]:
+        delta_s = f"{c['delta_vs_corregido']:+.4f}" if c["delta_vs_corregido"] != 0 else ("Referencia" if "Entregado" in c["etapa_modelo"] else "Base 0.0000")
+        rows_comp.append([
+            c["etapa_modelo"],
+            "392 Train / 98 Test" if "392" in c["particion_datos"] else "416 Train / 104 Test",
+            f"{c['cv_f1_macro']:.4f}",
+            f"{c['test_accuracy']:.4f}",
+            f"{c['test_precision_macro']:.4f}",
+            f"{c['test_recall_macro']:.4f}",
+            f"{c['test_f1_macro']:.4f}",
+            delta_s,
+        ])
     tbl_comp = s6.shapes.add_table(len(rows_comp) + 1, 8, Inches(0.55), Inches(1.18), Inches(12.23), Inches(2.75))
-    style_table(tbl_comp.table, headers_comp, rows_comp, [2.35, 1.55, 2.73, 1.00, 1.05, 1.05, 1.25, 1.25], font_size=10.0)
+    style_table(tbl_comp.table, headers_comp, rows_comp, [3.10, 1.65, 1.25, 1.15, 1.20, 1.20, 1.35, 1.33], font_size=9.8)
 
     add_feature_card(
         s6, 0.55, 4.15, 3.92, 2.80,
@@ -639,7 +667,7 @@ def build_proy_presentation():
     s7 = prs.slides.add_slide(blank)
     add_header(s7, 7, "Bloque 3 · Validación con Datos Reales de la MiPYME", "6. Evaluación en los 30 Registros Reales Reservados e Interpretabilidad")
 
-    add_box(s7, 0.55, 1.15, 5.20, 4.35, "Matriz sobre los 30 Casos Reales Reservados (29/30)")
+    add_box(s7, 0.55, 1.15, 5.20, 4.35, f"Matriz sobre los 30 Casos Reales Reservados ({val30['aciertos']}/30)")
     add_picture_fit(s7, FIG_DIR / "fig6_validacion_30_reales.png", 0.68, 1.56, 4.94, 3.82, trim_white=True)
 
     add_box(s7, 5.95, 1.15, 6.83, 4.35, "Factores Predictivos por Intención en el Modelo PROY")
@@ -647,14 +675,14 @@ def build_proy_presentation():
 
     add_feature_card(
         s7, 0.55, 5.65, 5.95, 1.32,
-        "Comprobación de Realidad (96.67% de Acierto en Reales)",
-        "Sobre los 30 casos reales que nunca entraron al entrenamiento, el modelo acierta 29 (8/8 Cotización, 7/8 Técnica, 7/7 Pedido, 7/7 Spam) con 0 clientes reales bloqueados.",
+        f"Comprobación de Realidad ({val30['accuracy_30_reales']*100:.2f}% de Acierto en Reales)",
+        f"Sobre los 30 casos reales orgánicos que nunca entraron al entrenamiento, el modelo acierta {val30['aciertos']}/30 (F1 = {val30['f1_macro_30_reales']:.4f}, 8/8 Cotización, 7/7 Pedido, 7/7 Spam) con 0 clientes reales bloqueados.",
         C_MINT_DARK
     )
     add_feature_card(
         s7, 6.83, 5.65, 5.95, 1.32,
-        "Análisis del Único Caso Real Discrepante (Controlado)",
-        "Una consulta técnica que preguntaba a la vez precio en tienda fue predicha como COTIZACION con confianza baja (0.61 < 0.68), activando derivación segura al asesor.",
+        "Análisis de los 2 Casos Reales Discrepantes (Controlados)",
+        "Corresponden a consultas técnicas híbridas que preguntan compatibilidad y precio/despacho simultáneamente; el umbral (< 0.68) y la respuesta con stock protegen la atención.",
         C_BLUE
     )
 
@@ -670,33 +698,18 @@ def build_proy_presentation():
     s8 = prs.slides.add_slide(blank)
     add_header(s8, 8, "Bloque 3 · Extensión de Semana 16 con Clustering", "7. Segmentación de Consultas y Clientes con K-Means (k = 4)")
 
-    add_box(s8, 0.55, 1.15, 7.15, 5.82, "Progresión del Modelo y Segmentación K-Means (Silhouette = 0.3003)")
+    add_box(s8, 0.55, 1.15, 7.15, 5.82, f"Progresión del Modelo y Segmentación K-Means (Silhouette = {clust['silhouette_ganador']})")
     add_picture_fit(s8, FIG_DIR / "fig5_proy_comparacion_y_clustering.png", 0.68, 1.58, 6.90, 5.25, trim_white=True)
 
-    add_feature_card(
-        s8, 7.88, 1.15, 4.90, 1.35,
-        "Clúster 0: Preventa Técnica (30.4% · S/ 46.13)",
-        "Consultas sobre compatibilidad y calce de piezas Bajaj/TVS. Acción: envío automático de ficha técnica y repuesto sugerido.",
-        C_MINT_DARK
-    )
-    add_feature_card(
-        s8, 7.88, 2.64, 4.90, 1.35,
-        "Clúster 1: Compra y Pedidos Diurnos (29.8% · S/ 169.34)",
-        "Clientes en horario de tienda (0% nocturno) cotizando o confirmando pago Yape. Acción: validación rápida para recojo en Comas.",
-        C_BLUE
-    )
-    add_feature_card(
-        s8, 7.88, 4.13, 4.90, 1.35,
-        "Clúster 2: Compra Nocturna Urgente (18.5% · S/ 191.50)",
-        "100% fuera de horario (18:00 a 08:00 h) con el ticket más alto (S/ 191.50). Acción: cotización en 1.3 s con stock SQL y QR Yape.",
-        C_BLUE_DARK
-    )
-    add_feature_card(
-        s8, 7.88, 5.62, 4.90, 1.35,
-        "Clúster 3: Ruido y Publicidad Externa (21.3% · S/ 2.75)",
-        "Mensajes publicitarios o ajenos al giro automotriz. Acción: archivo silencioso sin distraer al vendedor de mostrador.",
-        C_NAVY
-    )
+    colores_cards_c = [C_BLUE, C_BLUE_DARK, C_MINT_DARK, C_NAVY]
+    for idx_c, p in enumerate(clust["perfiles_segmentos"][:4]):
+        top_y = 1.15 + idx_c * 1.49
+        add_feature_card(
+            s8, 7.88, top_y, 4.90, 1.35,
+            f"Clúster {p['cluster_id']}: {p['intencion_dominante']} ({p['porcentaje_total']}% · S/ {p['monto_promedio_soles']:.2f})",
+            f"{p['nombre_segmento']} ({p['cantidad_registros']} casos, {p['pct_fuera_horario']}% nocturno). Acción: {p['accion_negocio_derivada']}",
+            colores_cards_c[idx_c]
+        )
 
     add_speaker_notes(s8, (
         "Expositor: Edu Morales.\n"
@@ -725,10 +738,10 @@ def build_proy_presentation():
         "// URL: https://huriosrally-ml.onrender.com/predict\n"
         "{\n"
         "  \"intencion_predicha\": \"COTIZACION\",\n"
-        "  \"confianza_modelo\": 0.9642,\n"
+        "  \"confianza_modelo\": 0.9803,\n"
         "  \"monto_potencial_soles\": 185.00,\n"
-        "  \"version_modelo\": \"v2.0.0-PROY-20261124\",\n"
-        "  \"hash_modelo\": \"135c43a3eb29\",\n"
+        f"  \"version_modelo\": \"{ver_mod}\",\n"
+        f"  \"hash_modelo\": \"{hash_mod}\",\n"
         "  \"umbral_aplicado\": 0.68,\n"
         "  \"modo_operacion\": \"INFERENCIA_ML_NORMAL\"\n"
         "}"
@@ -832,7 +845,7 @@ def build_proy_presentation():
     rows_ad = [
         ["Tiempo de primera respuesta (Día)", "12 a 15 minutos", "1.31 segundos", "-99.85 %", "DATO REAL MEDIDO en servidor de producción y logs de WhatsApp."],
         ["Tiempo de respuesta nocturna (18–08 h)", "6 a 8 horas", "1.31 segundos (24/7)", "Inmediato", "DATO REAL MEDIDO en pruebas nocturnas y sesión asistida."],
-        ["Exactitud en consultas reales de tienda", "0 % automatizado", "96.67 % (29/30 reales)", "+69.1 pts vs azar", "DATO REAL MEDIDO sobre lote externo de 30 reales (Condición 5)."],
+        ["Exactitud en consultas reales de tienda", "0 % automatizado", f"{val30['accuracy_30_reales']*100:.2f} % ({val30['aciertos']}/30 reales)", f"+{(test_f1_gan - metrics['linea_base_f1_macro'])*100:.1f} pts vs azar", "DATO REAL MEDIDO sobre lote externo de 30 reales (Condición 5)."],
         ["Clientes reales perdidos por filtro SPAM", "Riesgo alto manual", "0.00 % (Precisión 100 %)", "0 bloqueados", "DATO REAL MEDIDO en Test Set (n=98) y lote real (n=30)."],
         ["Ventas nocturnas mensuales recuperadas", "S/ 0.00", "S/ 2,250 a S/ 2,850 / mes", "+S/ 2,550/mes", "ESTIMACIÓN: ~90 consultas nocturnas/mes × S/ 183.40 × 15% conversión."],
         ["Horas de mostrador ahorradas al mes", "0 horas", "48 horas / mes (1.9 h/día)", "+48 h/mes", "ESTIMACIÓN: ~7 consultas diarias automatizadas × 15 min ahorrados."],
@@ -958,21 +971,21 @@ def build_proy_presentation():
     s15 = prs.slides.add_slide(blank)
     add_header(s15, 15, "Bloque 6 · Cierre y Valor Entregado a la MiPYME", "14. Conclusiones y Evolución Integral del Proyecto")
 
-    add_metric(s15, 0.55, 1.15, 2.90, 1.12, "F1-Macro PROY", "0.9404", "Mejora +2.93 pts vs Corregido", C_BLUE)
-    add_metric(s15, 3.66, 1.15, 2.90, 1.12, "Lote Real (30 Casos)", "96.67%", "29 de 30 aciertos (0 FP Spam)", C_BLUE_DARK)
+    add_metric(s15, 0.55, 1.15, 2.90, 1.12, "F1-Macro PROY", f"{test_f1_gan:.4f}", f"CV F1 = {cv_f1_gan:.4f} ± {cv_std_gan:.4f}", C_BLUE)
+    add_metric(s15, 3.66, 1.15, 2.90, 1.12, "Lote Real (30 Casos)", f"{val30['accuracy_30_reales']*100:.2f}%", f"{val30['aciertos']} de 30 aciertos (0 FP Spam)", C_BLUE_DARK)
     add_metric(s15, 6.77, 1.15, 2.90, 1.12, "Tiempo de Respuesta", "1.31 s", "De 15 min / 8 h a atención 24/7", C_MINT_DARK)
     add_metric(s15, 9.88, 1.15, 2.90, 1.12, "Impacto y Viabilidad", "S/ 2,250 – 2,850", "Costo S/ 0 (Free) o S/ 65/mes", C_BLUE)
 
     add_feature_card(
         s15, 0.55, 2.42, 3.92, 1.82,
         "1. Valor Entregado Hoy a Hurios Rally",
-        "Sistema e-commerce + clasificador ML v2.0.0 y Bot de WhatsApp (+51 937 395 986) operando en vivo con stock real de PostgreSQL, cálculo de venta potencial y degradación controlada.",
+        f"Sistema e-commerce + clasificador {ganador} ({ver_mod}, {peso_kb} KB) y Bot de WhatsApp (+51 937 395 986) operando en vivo con stock real de PostgreSQL y degradación controlada.",
         C_BLUE
     )
     add_feature_card(
         s15, 4.70, 2.42, 3.92, 1.82,
         "2. Método Riguroso y Límites Claros",
-        "Validado en 30 casos reales separados fuera de Train (29/30 aciertos) y 100 reales en entrenamiento. Las consultas ambiguas (~6%) son protegidas por el umbral humano (0.68).",
+        f"490 registros simulados para Train/Test (0% sintéticos como reales) + 30 registros orgánicos de bitácora reservados fuera de Train ({val30['aciertos']}/30 aciertos). Umbral humano < 0.68.",
         C_BLUE_DARK
     )
     add_feature_card(
@@ -986,8 +999,8 @@ def build_proy_presentation():
     rows_tr = [
         ["APF1 · Diagnóstico", "Resolver la pérdida del 35% a 40% de consultas nocturnas en Comas.", "Brecha cerrada: respuesta en 1.31 s 24/7 y F1-Macro superior a 0.85."],
         ["APF2 · MVP Cloud", "Desplegar tienda web, base PostgreSQL y contrato de 12 variables.", "Tienda React, API Spring Boot, catálogo de 48 repuestos y boletas PDF."],
-        ["APF3 · Modelo Base", "Entrenar clasificador supervisado multiclase e integrarlo al bot.", "SVM Lineal conectado al WhatsApp +51 937 395 986 y Dashboard BI."],
-        ["PROY · Cierre Final", "Corregir y mejorar el modelo, validar con la MiPYME y asegurar adopción.", "F1 = 0.9404, 29/30 en reales, K-Means, degradación controlada y Manual de 3 págs."],
+        ["APF3 · Modelo Base", "Entrenar clasificador supervisado multiclase e integrarlo al bot.", "Clasificador ML conectado al WhatsApp +51 937 395 986 y Dashboard BI."],
+        ["PROY · Cierre Final", "Corregir al 100% hallazgos APF3, mejorar el modelo y validar con MiPYME.", f"Ganador por CV ({ganador}, Test F1 = {test_f1_gan:.4f}), {val30['aciertos']}/30 en reales, K-Means y Manual."],
     ]
     tbl_tr = s15.shapes.add_table(len(rows_tr) + 1, 3, Inches(0.55), Inches(4.42), Inches(12.23), Inches(2.55))
     style_table(tbl_tr.table, headers_tr, rows_tr, [2.25, 4.70, 5.28], font_size=10.2)

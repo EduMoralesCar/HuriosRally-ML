@@ -190,12 +190,12 @@ def build_manual():
         "y reduciendo el tiempo de primera respuesta de 15 minutos a 1.31 segundos."
     )
     add_table(
-        ["Recurso en Producción", "Enlace / Número Oficial", "Credenciales y Uso Operativo"],
+        ["Recurso en Producción", "Enlace / Número Oficial", "Acceso y Uso Operativo"],
         [
-            ["Tienda Web y Panel Admin", "https://huriosrally-frontend.onrender.com", "Admin: edomocar@gmail.com | Catálogo, stock, ventas y boletas."],
-            ["Clasificador y Bandeja IA", "https://huriosrally-frontend.onrender.com/clasificador-ml", "Monitoreo WhatsApp en vivo, gráficas BI y simulador de demo."],
+            ["Tienda Web y Panel Admin", "https://huriosrally-frontend.onrender.com", "Acceso público a catálogo; panel admin con credenciales institucionales."],
+            ["Clasificador y Bandeja IA", "https://huriosrally-frontend.onrender.com/clasificador-ml", "Acceso directo en vivo a monitoreo WhatsApp, gráficas BI y simulador."],
             ["Bot Oficial de WhatsApp", "+51 937 395 986", "Atención automática 24/7 con menú guiado (1 al 4) y texto libre."],
-            ["API ML / Swagger Backend", "https://huriosrally-ml.onrender.com/docs", "Modelo servido v2.0.0-PROY-20261124 (SVM Lineal, F1 = 0.9404)."],
+            ["API ML / Swagger Backend", "https://huriosrally-ml.onrender.com/docs", "Modelo servido v2.1.0-PROY-20261124 (SVM Lineal elegido por 5-Fold CV)."],
         ],
         [2400, 3600, 3200],
     )

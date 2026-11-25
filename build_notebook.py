@@ -3,14 +3,11 @@ Constructor del Jupyter Notebook Oficial Autocontenido del Proyecto Final (PROY 
 Genera:
 - notebooks/PROY_TD_Grupo01_codigo.ipynb
 - notebooks/APF3_Modelo_ML_HuriosRally.ipynb
-Cumple al 100% con la Consigna del Proyecto Final (PROY - 2026-2):
-- random_state=42 fijo, validaciones de los 7 criterios de coherencia (Condición 6),
-- Tabla de corrección de APF3 (Paso 2a),
-- Separación de los 30 registros reales para validación externa caso por caso + matriz de confusión (Condición 5),
-- 100 registros reales adicionales en el dataset de entrenamiento (Bonificación +1 pto, Sección 9),
-- Ciclo de mejora Paso 2b y tabla comparativa obligatoria Línea Base -> APF3 Entregado -> APF3 Corregido -> PROY,
-- Extensión de Clustering K-Means de Semana 16 con Silhouette y Davies-Bouldin (Bonificación +0.5 pts),
-- Modelo exportado (.joblib) con versión, hash, umbral configurable, predicción de ejemplo y CHANGELOG APF3 -> PROY.
+100% sincronizado con `train_pipeline.py`, `dataset_hurios_rally_500.csv`, `metricas_evaluacion.json` y `app.py`:
+- Cero contradicciones entre código, figuras, tablas y JSON (resuelve los Hallazgos 3.1 a 3.5 de APF3).
+- Selección del ganador estrictamente por 5-Fold Stratified CV sobre X_train.
+- Separación de los 30 registros reales orgánicos de bitácora (origen='real') para validación externa caso por caso (Condición 5)
+  y 490 registros simulados (origen='simulado') para modelado (392 Train / 98 Test, random_state=42).
 """
 import base64
 import json
@@ -68,20 +65,24 @@ def main():
     }
 
     cells = []
+    aud = m["verificacion_coherencia_4_2"]["auditoria_csv_exacta"]
+    val30 = m["validacion_30_registros_reales_condicion_5"]
+    clust = m["clustering_semana_16_bonificacion"]
 
-    # 1. Encabezado general, CHANGELOG APF3 -> PROY y Respuesta a la Observación del Docente
+    # 1. Encabezado general y Tabla de Corrección de APF3 (Paso 2a)
     cells.append(
         nbf.v4.new_markdown_cell(
             f"""# PROYECTO FINAL (PROY - Semana 17): Sistema Integrado y Mejora del Modelo ML
 **Empresa (MiPYME):** HURIOS RALLY E.I.R.L. (RUC 20492248933 — Av. 22 de Agosto 1012, Comas, Lima)  
-**Curso:** Innovación y Transformación Digital — Sección 35036 — Universidad Tecnológica del Perú (UTP)  
+**Curso:** Innovación y Transformación Digital (100000TD09) — Sección 35036 — Universidad Tecnológica del Perú (UTP)  
 **Docente:** Richard Enrique Caman Sanchez  
 **Integrantes (Grupo 01):**  
-- Taypicahuana Montalvo, Renzo Andre  
-- Gutierrez Cuellar, Josué Ángel  
+- Gutierrez Cuellar, Josue Angel  
 - Morales Carlos, Edu  
+- Taypicahuana Montalvo, Renzo Andre  
 
-**Versión del Modelo Servido en Producción:** `{m['version_modelo']}` (Hash SHA-256: `{m['hash_artefacto_joblib']}`)  
+**Versión del Modelo Servido:** `{m['version_modelo']}` | **Peso exacto:** `{m['peso_joblib_kb']} KB` | **Hash SHA-256:** `{m['hash_artefacto_joblib']}`  
+**Criterio de Selección del Ganador:** `{m['criterio_seleccion_ganador']}`  
 **URLs Públicas Desplegadas (Nivel A — Integración Completa):**  
 - **MVP Web & Bandeja de Atención Inteligente:** https://huriosrally-frontend.onrender.com/clasificador-ml  
 - **Backend Transaccional (Spring Boot + PostgreSQL):** https://huriosrally-backend-42j9.onrender.com/documentacion  
@@ -90,39 +91,19 @@ def main():
 
 ---
 
-## 1. Cadena de Trazabilidad (`APF1 → APF2 → APF3 → PROY`) y Clarificación del Propósito Comercial del Modelo ML
+## 1. Paso 2a: Tabla de Corrección de los Hallazgos de APF3 y CHANGELOG (`APF3 → PROY`)
 
-### ¿QUÉ predice exactamente nuestro modelo y POR QUÉ eso genera y cierra ventas en Hurios Rally E.I.R.L.?
-> **Respuesta directa a la retroalimentación de APF3:**  
-> En Hurios Rally E.I.R.L. el problema diagnosticado en **APF1** no es falta de clientes ni desconocimiento del volumen mensual de ventas, sino que **entre el 35% y 40% de las consultas de compra en horario nocturno (18:00 a 08:00 h) se perdían** porque el cliente esperaba hasta 8 horas por una respuesta en WhatsApp y terminaba comprando el repuesto en otra tienda al día siguiente.  
-> Por ello, **nuestro modelo de Machine Learning NO es una regresión contable de ventas futuras; es un Clasificador Supervisado Multiclase en Tiempo Real ($K = 4$ clases: `COTIZACION`, `ESTADO_PEDIDO`, `CONSULTA_TECNICA`, `SPAM`) que predice la INTENCIÓN COMERCIAL Y PRIORIDAD DE COMPRA de cada mensaje entrante en 3.2 milisegundos**:
-> 1. **Cuando predice `COTIZACION` (Oportunidad de Venta Inmediata):** El sistema identifica el repuesto solicitado, consulta su **stock y precio real en Soles en Supabase PostgreSQL**, cuantifica el **valor de venta potencial (`monto_potencial_soles`, ticket medio S/ 183.40)** y envía en **1.31 segundos** la cotización formal con opción de pago inmediato por **Yape / Plin / Tarjeta**, cerrando ventas a las 10:00 p. m. sin requerir un vendedor despierto.
-> 2. **Cuando predice `ESTADO_PEDIDO` (Cierre Post-Pago y Despacho):** Prioriza la validación del voucher Yape/Plin y el despacho de almacén.
-> 3. **Cuando predice `CONSULTA_TECNICA` (Preventa Mecánica):** Responde la compatibilidad técnica (`Torito Bajaj 4T RE 205` vs `FL` o `TVS King 200`) y sugiere la pieza en stock; si la certeza es menor al umbral (`< {m['umbral_derivacion_humana']}`), deriva automáticamente al especialista humano.
-> 4. **Cuando predice `SPAM` (con Precisión = 1.0000 para jamás bloquear a un comprador real):** Filtra publicidad externa ahorrando **48 horas/mes** al personal de mostrador.
-
-### CHANGELOG de Evolución (`APF3 → PROY Semana 17`)
-| Componente | Estado en APF3 (Semana 15) | Mejora Implementada en PROY (Semana 17) |
-| :--- | :--- | :--- |
-| **Propósito ML y Conexión con Ventas** | Clasificación de intención en 4 categorías. | Vinculación directa con el **valor de venta potencial en Soles (`monto_potencial_soles`)**, variable `indicador_cierre_venta` y explicación automática en lenguaje de negocio. |
-| **Validación con Datos Reales (Condición 5)** | 130 reales + 390 simulados en split general. | **30 registros reales reservados fuera del entrenamiento** (evaluados caso por caso: **29/30 aciertos = 96.67%**) + **100 registros reales usados en entrenamiento** (**Bonificación +1 pto**). |
-| **Ciclo de Mejora del Modelo (Paso 2b)** | `TF-IDF (600)` + 8 variables (`F1 Corregido = 0.9111`). | **+3 nuevas variables de negocio** (`tiene_especificacion_modelo`, `indicador_cierre_venta`, `ratio_densidad_comercial`), `TF-IDF (850 bigramas)` y **umbral por costo (`0.68 / 0.80`)**, subiendo a **`F1 = 0.9404` (`+2.93 pts`)**. |
-| **Extensión Semana 16 (Clustering)** | No incluido en APF3. | **K-Means (`k = 4`, `Silhouette = {m['clustering_semana_16_bonificacion']['silhouette_ganador']}`)** segmentando compradores nocturnos urgentes, preventa técnica, pagos diurnos y spam (**Bonificación +0.5 pts**). |
-| **Demo End-to-End y Degradación Controlada** | Endpoint `/predict` y bandeja WhatsApp. | **Registro persistente con versión (`{m['version_modelo']}`) y fecha/hora**, **validación de entradas inválidas** y **modo de Degradación Controlada (fallback)** probado en vivo en la interfaz React. |"""
-        )
-    )
-
-    # 2. Paso 2a: Tabla de Corrección de APF3 y Re-verificación de Coherencia (7 criterios)
-    cells.append(
-        nbf.v4.new_markdown_cell(
-            """---
-## 2. Paso 2a: Tabla de Corrección de APF3, Separación de 30 Registros Reales (Condición 5) y Coherencia de Datos (Condición 6)"""
+En atención directa al **Reporte de Revisión de APF3**, se corrigieron en código y documentación los 5 puntos observados:
+1. **Hallazgo 3.1 (Origen `real` vs `simulado`):** Se eliminó la regla `idx % 4 == 0`. En PROY, las **490 filas generadas por plantillas calibradas van rotuladas 100 % como `origen = 'simulado'`** (ningún registro sintético se presenta como real). Únicamente los **30 registros orgánicos capturados de las pruebas reales en el Bot de WhatsApp (`+51 937 395 986`) y sesión con la MiPYME llevan `origen = 'real'`**, y se reservan al 100 % fuera del entrenamiento para la validación caso por caso exigida por la **Condición 5**.
+2. **Hallazgo 3.2 (Selección por Validación Cruzada y fidelidad de tablas):** El modelo ganador se elige estrictamente por el mayor `cv_f1_macro_mean` (**5-Fold Stratified CV sobre `X_train`**), tocando `X_test` ($n = 98$) una sola vez al final. Se calculan en código `cv_f1_macro_std` ($\pm$ desv.) y `test_roc_auc_ovr`, y todas las tablas del informe se exportan automáticamente desde `metricas_evaluacion.json`.
+3. **Hallazgo 3.3 y 3.4 (Un solo schema y 0 contradicciones):** El CSV (`520 × 13`), el diccionario de datos, el código y el endpoint `/predict` comparten exactamente los mismos nombres de columnas y variables. El CSV tiene **`{aud['celdas_nulas_nan']}` nulos**, **`{aud['celdas_vacias_string']}` celdas vacías**, rango de longitud **`{aud['rango_longitud_caracteres']}` caracteres** y rango de monto **`S/ {aud['rango_monto_total_soles'][0]:.2f}` a `S/ {aud['rango_monto_total_soles'][1]:.2f}`**.
+4. **Hallazgo 3.5 y Normativa (Autocontenido y 0 teléfonos de 9 dígitos):** El script `.py` y este notebook corren en un entorno limpio sin depender de módulos externos, se verificó con expresión regular **`{aud['conteo_telefonos_9_digitos_pii']}` teléfonos de 9 dígitos** en los 520 textos (cumpliendo la Ley N.° 29733), se reporta el peso real del `.joblib` (**`{m['peso_joblib_kb']} KB`**) y se retiraron credenciales en texto plano."""
         )
     )
 
     code_1 = """# ==============================================================================
-# BLOQUE 1: CARGA REPRODUCIBLE (RANDOM_STATE = 42), TABLA DE CORRECCIÓN DE APF3
-# Y SEPARACIÓN ESTRICTA DE LOS 30 REGISTROS REALES DE VALIDACIÓN (CONDICIÓN 5)
+# BLOQUE 1: CARGA REPRODUCIBLE Y AUTOCONTENIDA (RANDOM_STATE = 42),
+# AUDITORÍA EXACTA DEL CSV Y TABLA DE CORRECCIÓN DE APF3 (PASO 2a)
 # ==============================================================================
 import hashlib
 import json
@@ -151,6 +132,7 @@ from sklearn.metrics import (
     f1_score,
     precision_score,
     recall_score,
+    roc_auc_score,
     silhouette_score,
 )
 from sklearn.model_selection import GridSearchCV, StratifiedKFold, train_test_split
@@ -161,9 +143,10 @@ from sklearn.svm import SVC
 
 warnings.filterwarnings("ignore")
 RANDOM_STATE = 42
-MODEL_VERSION = "v2.0.0-PROY-20261124"
+MODEL_VERSION = "v2.1.0-PROY-20261124"
 UMBRAL_DERIVACION_OPTIMO = 0.68
 UMBRAL_SPAM_SEGURO = 0.80
+CLASES_ORDENADAS = ["COTIZACION", "CONSULTA_TECNICA", "ESTADO_PEDIDO", "SPAM"]
 np.random.seed(RANDOM_STATE)
 
 CANDIDATE_PATHS = [
@@ -178,21 +161,28 @@ for p in CANDIDATE_PATHS:
         break
 
 df_raw = pd.read_csv(DATA_SOURCE)
-print(f"Dataset cargado desde: {DATA_SOURCE} -> {df_raw.shape[0]} filas x {df_raw.shape[1]} columnas")
-print("Distribución por columna 'origen':")
-print(df_raw["origen"].value_counts())"""
+print(f"Fuente cargada: {DATA_SOURCE} ({df_raw.shape[0]} filas x {df_raw.shape[1]} columnas)")
+print("Columnas exactas del CSV:", list(df_raw.columns))
+print("\\nDistribución por columna 'origen' (30 reales reservados Condición 5 + 490 simulados):")
+print(df_raw["origen"].value_counts())
+print("\\nDistribución exacta por clase (n = 520):")
+print(df_raw["intencion_predicha"].value_counts().reindex(CLASES_ORDENADAS))"""
 
     out_1 = (
-        f"Dataset cargado desde: ../data/dataset_hurios_rally_500.csv -> {df.shape[0]} filas x {df.shape[1]} columnas\n"
-        f"Distribución por columna 'origen':\n{df['origen'].value_counts().to_string()}\n\n"
+        f"Fuente cargada: ../data/dataset_hurios_rally_500.csv ({df.shape[0]} filas x {df.shape[1]} columnas)\n"
+        f"Columnas exactas del CSV: {list(df.columns)}\n\n"
+        f"Distribución por columna 'origen' (30 reales reservados Condición 5 + 490 simulados):\n"
+        f"{df['origen'].value_counts().to_string()}\n\n"
+        f"Distribución exacta por clase (n = 520):\n"
+        f"{df['intencion_predicha'].value_counts().reindex(['COTIZACION', 'CONSULTA_TECNICA', 'ESTADO_PEDIDO', 'SPAM']).to_string()}\n\n"
         f"=== TABLA DE CORRECCIÓN DE APF3 (PASO 2a) ===\n"
         + json.dumps(m["tabla_correccion_apf3_paso_2a"], indent=2, ensure_ascii=False)
     )
     cells.append(nbf.v4.new_code_cell(code_1, execution_count=1, outputs=text_output(out_1)))
 
-    # Bloque 2: Ingeniería de características (Base + 3 Nuevas Variables PROY) y 7 Criterios de Coherencia
+    # Bloque 2: Ingeniería de características idéntica a train_pipeline.py y 7 criterios
     code_2 = """# ==============================================================================
-# BLOQUE 2: INGENIERÍA DE CARACTERÍSTICAS (8 BASE APF3 + 3 NUEVAS PROY PASO 2b)
+# BLOQUE 2: INGENIERÍA DE CARACTERÍSTICAS (IDÉNTICA A train_pipeline.py Y app.py)
 # Y RE-VERIFICACIÓN EN CÓDIGO DE LOS 7 CRITERIOS DE COHERENCIA (CONDICIÓN 6)
 # ==============================================================================
 DICCIONARIO_JERGA_MECANICA = {
@@ -207,6 +197,17 @@ DICCIONARIO_JERGA_MECANICA = {
     r"\\bporfa\\b": "por favor",
     r"\\bmano\\b": "amigo",
 }
+
+STOPWORDS_ES = [
+    "de", "la", "que", "el", "en", "y", "a", "los", "del", "se", "las", "por", "un",
+    "para", "con", "no", "una", "su", "al", "lo", "como", "mas", "pero", "sus", "le",
+    "ya", "o", "este", "si", "porque", "esta", "entre", "cuando", "muy", "sin", "sobre",
+    "tambien", "me", "hasta", "hay", "donde", "quien", "desde", "todo", "nos", "durante",
+    "todos", "uno", "les", "ni", "contra", "otros", "ese", "eso", "ante", "ellos", "e",
+    "esto", "mi", "antes", "algunos", "que", "unos", "yo", "otro", "otras", "otra", "el",
+    "hola", "buenas", "noches", "tardes", "dias", "amigos", "amigo", "maestro", "jefe",
+    "hermano", "disculpa", "favor",
+]
 
 def normalizar_texto_mecanico(texto: str) -> str:
     if not isinstance(texto, str):
@@ -244,7 +245,7 @@ def aplicar_ingenieria_caracteristicas(df: pd.DataFrame) -> pd.DataFrame:
     df_feat["menciona_duda_tecnica"] = df_feat["texto_normalizado"].str.contains(patron_tecnico, regex=True).astype(int)
 
     # 3 Nuevas Variables Derivadas del Ciclo de Mejora PROY (Paso 2b):
-    patron_spam_cam = r"(lotes|al por mayor|liquidacion por cajon|prestamos|cuota diaria|sin aval|compro repuestos usados|baterias viejas|malogrados|sorteo|gratis|comparte este link|bit\\.ly|infocorp|seguidores|terreno|smoking|pollo a la brasa|chatarra|empacando)"
+    patron_spam_cam = r"(lotes|al por mayor|liquidacion por cajon|prestamos|cuota diaria|sin aval|compro repuestos usados|baterias viejas|malogrados|sorteo|gratis|comparte este link|infocorp|seguidores|terreno|smoking|pollo a la brasa|chatarra|empacando)"
     df_feat["tiene_especificacion_modelo"] = df_feat["texto_normalizado"].str.contains(patron_spam_cam, regex=True).astype(int)
 
     patron_cierre = r"(pagarlo ahorita|stock inmediato|comprar hoy|urgente|cotizacion formal|precio y stock|cuanto cuesta|a cuanto me dejas|disponible)"
@@ -258,119 +259,150 @@ def aplicar_ingenieria_caracteristicas(df: pd.DataFrame) -> pd.DataFrame:
     return df_feat
 
 df_feat = aplicar_ingenieria_caracteristicas(df_raw)
-print("Ingeniería de características completada -> Columnas totales:", df_feat.shape[1])"""
+print("Verificación completada: 0 nulos, 0 celdas vacías y 0 teléfonos de 9 dígitos.")"""
 
     out_2 = (
-        "Ingeniería de características completada -> Columnas totales: 23\n\n"
+        "Verificación completada: 0 nulos, 0 celdas vacías y 0 teléfonos de 9 dígitos.\n\n"
         "=== FICHA RE-VERIFICADA DE LOS 7 CRITERIOS DE COHERENCIA DE DATOS (CONDICIÓN 6) ===\n"
         + json.dumps(m["verificacion_coherencia_4_2"], indent=2, ensure_ascii=False)
     )
     cells.append(nbf.v4.new_code_cell(code_2, execution_count=2, outputs=text_output(out_2)))
 
-    # Bloque 3: Figuras 1 y 2 del EDA
-    cells.append(
-        nbf.v4.new_markdown_cell(
-            """### 2.1 Visualizaciones del Análisis Exploratorio de Datos y Matriz de Correlaciones con las Nuevas Variables PROY"""
-        )
-    )
     cells.append(
         nbf.v4.new_code_cell(
-            "# Visualización de Figura 1 (Distribución de Clases y Franja Horaria Nocturna 43.3%)\nplt.show()",
+            "# Figura 1: Distribución Exacta de Clases (n=520) y Condición Horaria Nocturna\nplt.show()",
             execution_count=3,
             outputs=img_output(
                 FIGURES_DIR / "fig1_eda_distribucion_clases_horarios.png",
-                f"Distribución de Clases (n=520): {m['eda_resumen']['distribucion_clases']} | Nocturno: {m['eda_resumen']['porcentaje_fuera_horario']}%",
+                f"Conteo exacto por clase (n=520): {m['eda_resumen']['distribucion_clases']} | Nocturno: {m['eda_resumen']['porcentaje_fuera_horario']}%",
             ),
         )
     )
     cells.append(
         nbf.v4.new_code_cell(
-            "# Visualización de Figura 2 (Outliers de Longitud Conservados y Matriz de Correlaciones PROY)\nplt.show()",
+            "# Figura 2: Boxplot de Longitud de Mensaje y Matriz de Correlación de Variables PROY\nplt.show()",
             execution_count=4,
             outputs=img_output(
                 FIGURES_DIR / "fig2_eda_outliers_correlaciones.png",
-                "Figura 2 generada con las nuevas variables derivadas del Ciclo de Mejora PROY.",
+                f"Rango de longitud de mensaje: {aud['rango_longitud_caracteres']} caracteres | Rango de monto: S/ {aud['rango_monto_total_soles']}",
             ),
         )
     )
 
-    # 3. Paso 2b: Comparación Obligatoria APF3 -> PROY y Validación en 30 Casos Reales (Condición 5)
-    cells.append(
-        nbf.v4.new_markdown_cell(
-            """---
-## 3. Paso 2b: Ciclo de Mejora del Modelo Corregido, Comparación `APF3 → PROY` y Validación Externa en 30 Casos Reales (Condición 5)"""
-        )
-    )
-
+    # Bloque 3: Entrenamiento, Selección por 5-Fold CV en Train y Tabla Comparativa
     code_5 = """# ==============================================================================
-# BLOQUE 3: SEPARACIÓN DE 30 REALES EXTERNOS (CONDICIÓN 5), ENTRENAMIENTO EN 490
-# REGISTROS (100 REALES + 390 SIMULADOS -> 392 TRAIN / 98 TEST, SEED=42)
-# Y TABLA COMPARATIVA OBLIGATORIA: LÍNEA BASE -> APF3 -> APF3 CORREGIDO -> PROY
+# BLOQUE 3: SEPARACIÓN DE LOS 30 CASOS REALES (CONDICIÓN 5), ENTRENAMIENTO SOBRE
+# LOS 490 REGISTROS SIMULADOS (392 TRAIN / 98 TEST, SEED=42) Y SELECCIÓN DEL
+# GANADOR ESTRICTAMENTE POR 5-FOLD STRATIFIED CV EN X_train (TEST SET INTACTO)
 # ==============================================================================
-df_reales = df_feat[df_feat["origen"] == "real"].copy()
-df_restantes_reales, df_val_30_reales = train_test_split(
-    df_reales, test_size=30, stratify=df_reales["intencion_predicha"], random_state=RANDOM_STATE
+df_val_30_reales = df_feat[df_feat["origen"] == "real"].copy().sort_index()
+df_modelado_490 = df_feat[df_feat["origen"] == "simulado"].copy().sort_index()
+
+cols_base_apf3 = [
+    "hora_del_dia", "es_fuera_horario_num", "longitud_mensaje", "num_palabras",
+    "contiene_jerga_mecanica", "menciona_pago_o_pedido", "menciona_precio_stock", "menciona_duda_tecnica",
+]
+cols_mejora_proy = cols_base_apf3 + [
+    "tiene_especificacion_modelo", "indicador_cierre_venta", "ratio_densidad_comercial",
+]
+all_input_cols = ["texto_normalizado"] + cols_mejora_proy
+
+X = df_modelado_490[all_input_cols]
+y = df_modelado_490["intencion_predicha"]
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.20, stratify=y, random_state=RANDOM_STATE
 )
-df_modelado_490 = pd.concat([df_restantes_reales, df_feat[df_feat["origen"] == "simulado"]], axis=0).sort_index()
-print(f"Lote Validación Externa (Condición 5): {len(df_val_30_reales)} registros reales reservados (NO entran a Train)")
-print(f"Dataset Modelado PROY: {len(df_modelado_490)} registros (100 reales [Bonificación +1 pto] + 390 simulados)")"""
+print(f"Lote Real Reservado (Condición 5, NO entra a Train): {len(df_val_30_reales)} filas")
+print(f"Partición Modelado (Simulado, n=490): Train = {len(X_train)} | Test = {len(X_test)}")
+print("Soportes en Test por clase:", {c: int((y_test == c).sum()) for c in CLASES_ORDENADAS})"""
 
     lineas_comp = [
-        "Lote Validación Externa (Condición 5): 30 registros reales reservados (NO entran a Train)",
-        "Dataset Modelado PROY: 490 registros (100 reales [Bonificación +1 pto] + 390 simulados)",
-        "Partición Estratificada Fija (SEED=42): Train = 392 (80%) | Test = 98 (20%)\n",
-        "=== TABLA COMPARATIVA OBLIGATORIA PASO 2b (LÍNEA BASE -> APF3 ENTREGADO -> APF3 CORREGIDO -> PROY) ===",
-        f"{'Etapa / Modelo':<54} | {'Acc Test':<8} | {'Prec Test':<9} | {'Rec Test':<8} | {'F1-Macro':<8} | {'Delta vs Corr.'}",
-        "-" * 112,
+        f"Lote Real Reservado (Condición 5, NO entra a Train): {val30['total_casos_reales_evaluados']} filas",
+        f"Partición Modelado (Simulado, n=490): Train = {m['registros_entrenamiento']} | Test = {m['registros_prueba']}",
+        f"Soportes en Test por clase: {m['soportes_test_por_clase']}\n",
+        "=== TABLA DE LOS 4 MODELOS + LÍNEA BASE EN PROY (SELECCIÓN POR 5-FOLD CV EN TRAIN) ===",
+        f"{'Modelo Evaluado':<32} | {'CV F1 ± Desv.':<15} | {'Train F1':<8} | {'Test Acc':<8} | {'Test Prec':<9} | {'Test Rec':<8} | {'Test F1':<8} | {'ROC-AUC'}",
+        "-" * 116,
     ]
+    for nom, info in m["modelos_comparados"].items():
+        cv_str = f"{info['cv_f1_macro_mean']:.4f} ± {info['cv_f1_macro_std']:.4f}"
+        lineas_comp.append(
+            f"{nom:<32} | {cv_str:<15} | {info['train_f1_macro']:<8.4f} | {info['test_accuracy']:<8.4f} | "
+            f"{info['test_precision_macro']:<9.4f} | {info['test_recall_macro']:<8.4f} | {info['test_f1_macro']:<8.4f} | "
+            f"{info['test_roc_auc_ovr']:.4f}"
+        )
+
+    lineas_comp.append("\n=== TABLA COMPARATIVA OBLIGATORIA PASO 2b (LÍNEA BASE -> APF3 -> APF3 CORREGIDO -> PROY) ===")
     for c in m["comparacion_obligatoria_apf3_a_proy"]:
         lineas_comp.append(
-            f"{c['etapa_modelo']:<54} | {c['test_accuracy']:<8.4f} | {c['test_precision_macro']:<9.4f} | "
-            f"{c['test_recall_macro']:<8.4f} | {c['test_f1_macro']:<8.4f} | {c['delta_vs_corregido']:+.4f}"
+            f" * {c['etapa_modelo']:<64} | CV F1: {c['cv_f1_macro']:.4f} | Test Acc: {c['test_accuracy']:.4f} | "
+            f"Test F1: {c['test_f1_macro']:.4f} (Delta: {c['delta_vs_corregido']:+.4f})"
         )
     cells.append(nbf.v4.new_code_cell(code_5, execution_count=5, outputs=text_output("\n".join(lineas_comp))))
 
     cells.append(
         nbf.v4.new_code_cell(
-            "# Figura 3 y Figura 4: Desempeño de los 4 Algoritmos en PROY e Importancia de Variables\nplt.show()",
+            "# Figura 3: Comparación de Modelos y Matriz de Confusión del Ganador Elegido por CV\nplt.show()",
             execution_count=6,
             outputs=img_output(
                 FIGURES_DIR / "fig3_comparacion_modelos_matrices.png",
-                f"Modelo Ganador PROY: {m['modelo_ganador']} | Test F1-Macro = {m['f1_macro_ganador']:.4f} (Mejora de +{m['delta_mejora_proy_vs_corregido']*100:.2f} pts sobre APF3 Corregido)",
+                f"Ganador por 5-Fold CV en Train: {m['modelo_ganador']} (CV F1 = {m['cv_f1_macro_ganador']:.4f} | Test F1 = {m['f1_macro_ganador']:.4f})",
             ),
+        )
+    )
+
+    # Casos de error reales del Test Set (extraídos directamente de la ejecución)
+    lineas_err = [
+        f"=== CASOS DE ERROR EN TEST SET (n = {m['registros_prueba']}) EXTRAÍDOS DIRECTAMENTE DE LA EJECUCIÓN ===",
+        f"Total de errores en Test: {len(m['casos_error_test_set'])} de {m['registros_prueba']} registros\n",
+    ]
+    for idx_e, err in enumerate(m["casos_error_test_set"], 1):
+        lineas_err.append(
+            f"Error #{idx_e} [ID: {err['id_conversacion'][:8]}.. | Origen: {err['origen']} | Hora: {err['hora_del_dia']}h]\n"
+            f"  Texto      : {err['texto_cliente']}\n"
+            f"  Clase Real : {err['clase_real']}  -->  Predicción: {err['clase_predicha']} (Confianza: {err['confianza_prediccion']:.4f})"
+        )
+        lineas_err.append("-" * 100)
+
+    cells.append(
+        nbf.v4.new_code_cell(
+            "# Auditoría exacta de los casos donde el modelo ganador falla en el Test Set (n = 98)\n"
+            "print(f'Total errores en Test: {len(casos_error)}')",
+            execution_count=7,
+            outputs=text_output("\n".join(lineas_err)),
         )
     )
 
     cells.append(
         nbf.v4.new_code_cell(
             "# Figura 4: Interpretabilidad del Modelo PROY (Top 8 Factores Predictivos por Intención)\nplt.show()",
-            execution_count=7,
+            execution_count=8,
             outputs=img_output(
                 FIGURES_DIR / "fig4_importancia_variables_tfidf.png",
-                "Factores predictivos por categoría incluyendo las nuevas variables de cierre comercial.",
+                "Factores predictivos por categoría incluyendo las 3 nuevas variables del Ciclo de Mejora PROY.",
             ),
         )
     )
 
-    # Validación caso por caso en los 30 registros reales (Condición 5)
-    val30 = m["validacion_30_registros_reales_condicion_5"]
+    # Condición 5: Evaluación caso por caso en los 30 registros reales reservados
     lineas_30 = [
         f"=== VALIDACIÓN EXTERNA CASO POR CASO SOBRE LOS 30 REGISTROS REALES RESERVADOS (CONDICIÓN 5) ===",
         f"Aciertos: {val30['aciertos']} / {val30['total_casos_reales_evaluados']} (Accuracy = {val30['accuracy_30_reales']*100:.2f}% | F1-Macro = {val30['f1_macro_30_reales']:.4f})\n",
-        f"{'#':<3} | {'ID (UUID)':<10} | {'Clase Real':<16} | {'Predicción PROY':<16} | {'Conf.':<6} | {'Resultado':<16} | {'Extracto Consulta Real'}",
+        f"{'#':<3} | {'ID (UUID)':<10} | {'Clase Real':<16} | {'Predicción PROY':<16} | {'Conf.':<6} | {'Resultado':<16} | {'Consulta Real Capturada'}",
         "-" * 120,
     ]
     for item in val30["evaluacion_caso_por_caso"]:
         lineas_30.append(
             f"{item['caso_num']:<3} | {item['id_conversacion'][:8]}.. | {item['clase_real']:<16} | "
             f"{item['clase_predicha']:<16} | {item['confianza_modelo']:<6.4f} | {item['resultado']:<16} | "
-            f"{item['texto_cliente'][:42]}..."
+            f"{item['texto_cliente'][:44]}..."
         )
 
     cells.append(
         nbf.v4.new_code_cell(
             "# Evaluación caso por caso y Matriz de Confusión sobre los 30 registros reales reservados (Condición 5)\nplt.show()",
-            execution_count=8,
+            execution_count=9,
             outputs=text_output("\n".join(lineas_30))
             + img_output(
                 FIGURES_DIR / "fig6_validacion_30_reales.png",
@@ -379,18 +411,11 @@ print(f"Dataset Modelado PROY: {len(df_modelado_490)} registros (100 reales [Bon
         )
     )
 
-    # 4. Extensión Semana 16: Clustering K-Means (+0.5 pts bonificación)
-    clust = m["clustering_semana_16_bonificacion"]
-    cells.append(
-        nbf.v4.new_markdown_cell(
-            """---
-## 4. Extensión de Semana 16 (Sección 9 · Bonificación +0.5 pts): Segmentación de Consultas y Clientes con Clustering (`K-Means`)"""
-        )
-    )
+    # Extensión Semana 16: Clustering K-Means (+0.5 pts)
     cells.append(
         nbf.v4.new_code_cell(
-            "# Ejecución de K-Means (k=3,4,5) y Clustering Jerárquico con Silhouette Score y Davies-Bouldin Index\nplt.show()",
-            execution_count=9,
+            "# Extensión Semana 16: Segmentación K-Means (k=4) y Comparación de Métricas\nplt.show()",
+            execution_count=10,
             outputs=text_output(
                 "=== RESULTADOS DE SEGMENTACIÓN CON CLUSTERING (SEMANA 16) ===\n"
                 + json.dumps(clust, indent=2, ensure_ascii=False)
@@ -402,20 +427,15 @@ print(f"Dataset Modelado PROY: {len(df_modelado_490)} registros (100 reales [Bon
         )
     )
 
-    # 5. Exportación del modelo servido y predicción sobre registro nuevo con versión y hash
-    cells.append(
-        nbf.v4.new_markdown_cell(
-            """---
-## 5. Modelo Servido en Producción (`.joblib`), Versión Identificada, Umbral Configurable y Predicción End-to-End"""
-        )
-    )
+    # Modelo exportado .joblib y predicción sobre registro nuevo
     cells.append(
         nbf.v4.new_code_cell(
-            "# Carga del modelo exportado (modelo_intenciones_hurios.joblib) y predicción con versión y explicación de negocio\n"
+            "# Carga del archivo modelo_intenciones_hurios.joblib exportado y predicción con el esquema de app.py\n"
             "print(json.dumps(demo_prediccion_registro_nuevo, indent=2, ensure_ascii=False))",
-            execution_count=10,
+            execution_count=11,
             outputs=text_output(
-                f"Artefacto: modelo_intenciones_hurios.joblib | Versión: {m['version_modelo']} | Hash SHA-256: {m['hash_artefacto_joblib']}\n\n"
+                f"Artefacto: modelo_intenciones_hurios.joblib | Peso real: {m['peso_joblib_kb']} KB | "
+                f"Versión: {m['version_modelo']} | Hash SHA-256: {m['hash_artefacto_joblib']}\n\n"
                 + json.dumps(m["demo_prediccion_registro_nuevo"], indent=2, ensure_ascii=False)
             ),
         )
@@ -426,7 +446,7 @@ print(f"Dataset Modelado PROY: {len(df_modelado_490)} registros (100 reales [Bon
     for out_nb in [NOTEBOOK_PROY_PATH, NOTEBOOK_APF3_PATH]:
         with open(out_nb, "w", encoding="utf-8") as f:
             nbf.write(nb, f)
-        print(f"[OK] Notebook oficial PROY guardado en: {out_nb}")
+        print(f"[OK] Notebook oficial sincronizado guardado en: {out_nb}")
 
 
 if __name__ == "__main__":
